@@ -53,20 +53,50 @@ pre-commit run --all-files
 
 1. **Run a camera or controller node** to start streaming data. Example:
    ```bash
-   # TODO(codex) fix
+   python scripts/camera.launch.py
    ```
 2. **Collect data** with the writer node:
    ```bash
-   # TODO(codex) fix
+   python scripts/lift.py --help
    ```
 3. **Convert memmaps** to LeRobot datasets using the scripts in `lrbt`:
    ```bash
-   python xgym/lrbt/from_memmap.py --help # TODO(codex) fix
+   python xgym/lrbt/from_memmap.py --help
    ```
 
 ## Scripts
 
-TODO(codex) add scripts documentation with purpose and usage
+The `scripts/` folder contains helper utilities and launch files for data
+collection and debugging. Each script supports `--help` to list available
+arguments.
+
+| Script | Purpose |
+| ------ | ------- |
+| `camera.launch.py` | Launch ROS2 camera nodes with a viewer. |
+| `camera.py` | Display connected cameras to verify streaming. |
+| `camera4human.py` | Record frames from multiple cameras for manual annotation. |
+| `debug.launch.py` | Start robot and SpaceMouse nodes for development. |
+| `demo.launch.py` | Example pipeline running camera, robot, and writer nodes. |
+| `embed.py` | Create sentence embeddings for task descriptions. |
+| `eval.py` | Evaluate a trained policy in the lift environment. |
+| `filter.py` | Filter RLDS datasets and optionally drop failed episodes. |
+| `get_calibration.py` | Capture robot poses for camera calibration. |
+| `hamer_client.py` | Client for the HaMer hand‑tracking server. |
+| `hand_tele.py` | Teleoperate the robot using tracked hand poses. |
+| `human.py` | Run a human demonstration environment. |
+| `lift.py` | Collect lifting task episodes. |
+| `main.py` | Entry point for custom experiments. |
+| `mano_read_npz.py` | Visualize MANO keypoint `.npz` files. |
+| `mano_pipe_v3.py` | Full MANO hand pose estimation pipeline. |
+| `poptree.py` | Move `.npz` files up one directory level. |
+| `read_npz.py` | Inspect `.npz` episodes and keep or discard them. |
+| `reader_rlds.py` | Render RLDS datasets with overlayed keypoints. |
+| `run_from_data.py` | Replay a dataset through an environment. |
+| `sandbox.py` | Miscellaneous sandbox for development. |
+| `stack.py` | Collect stacking task episodes. |
+| `stack_model.py` | Run a model policy in the stacking task. |
+| `test_safety_box.py` | Example usage of safety‑box utilities. |
+| `view_calibration.py` | Visualize saved camera calibration results. |
 
 ## Lerobot Dataset
 
