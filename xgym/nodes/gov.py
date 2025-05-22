@@ -7,6 +7,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32MultiArray
 
 from xgym.nodes.base import Base
+import subprocess
 
 
 class Governor(Base):
@@ -34,14 +35,17 @@ class Governor(Base):
             self.active_pub.publish(Bool(data=not self.active))
             self.get_logger().info("XGym Reactivated")
 
-        if data["fn1"] == 1:
-            if self.active is False:  # TODO add toggle replay
-                self.get_logger().info("Replay")
-                self.pubs["replay"].publish(Bool(data=True))
+       
+        # if data["fn1"] == 1:
+            # if self.active is False:  # TODO add toggle replay
+                # self.get_logger().info("Replay")
+                # self.pubs["replay"].publish(Bool(data=True))
         if data["fn1"] == 2:
             if self.active is False:
                 self.pubs["del"].publish(Bool(data=True))
-
+        if data["fn2"] == 1:
+            self.get_logger().info("Pedal 2 pressed deleting latest data files...")
+            subprocess.run(["python3", "/data/xgym/scripts/delete_latest.py"])
 
 class ModelGovernor(Governor):
 
