@@ -17,7 +17,9 @@ import tensorflow_datasets as tfds
 import tyro
 from flax.traverse_util import flatten_dict
 from jax import numpy as jnp
-from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME as LEROBOT_HOME
+from lerobot.common.datasets.lerobot_dataset import (
+    HF_LEROBOT_HOME as LEROBOT_HOME,
+)
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from rich.pretty import pprint
 from tqdm import tqdm
@@ -27,6 +29,7 @@ from xgym.rlds.util import add_col, remove_col
 from xgym.rlds.util.render import render_openpose
 from xgym.rlds.util.trajectory import binarize_gripper_actions, scan_noop
 from xgym.viz.mano import overlay_palm, overlay_pose
+from xgym.lrbt.builder import BaseConverter
 
 
 class Task(enum.Enum):
@@ -241,79 +244,62 @@ def convert(
     return dataset
 
 
-def main(cfg: BaseReaderConfig):
-    name = f"xgym_{cfg.task}_{cfg.embodiment}:{cfg.version}"
-    xgym.logger.info(f"Loading {name} dataset")
-    ds = tfds.load(name)["train"]
+class RLDSConverter(BaseConverter):
+    def __init__(self, cfg: BaseReaderConfig) -> None:
+        super().__init__(repo_id="mhyatt000/demo", robot_type="xarm")
+        self.cfg = cfg
 
-    spec = lambda tree: jax.tree.map(lambda x: x.shape, tree)
-    take = lambda tree, _i: jax.tree.map(lambda x: x[_i], tree)
+    def run(self) -> None:
+        name = f"xgym_{self.cfg.task}_{self.cfg.embodiment}:{self.cfg.version}"
+        xgym.logger.info(f"Loading {name} dataset")
+        ds = tfds.load(name)["train"]
 
-    dataset = None
-    for ep in tqdm(ds, total=len(ds)):
-        n = len(ep["steps"])
-        steps = [x for x in ep["steps"]]
-        steps = jax.tree.map(lambda x: np.array(x), steps)
-        steps = jax.tree.map(lambda *_x: np.stack(_x, axis=0), *steps)
+        spec = lambda tree: jax.tree.map(lambda x: x.shape, tree)
+        take = lambda tree, i: jax.tree.map(lambda x: x[i], tree)
 
-        steps.pop("discount")
-        steps.pop("reward")
-        steps.pop("is_first")
-        steps.pop("is_last")
-        steps.pop("is_terminal")
-        steps.pop("action")
+        for ep in tqdm(ds, total=len(ds)):
+            n = len(ep["steps"])
+            steps = [x for x in ep["steps"]]
+            steps = jax.tree.map(lambda x: np.array(x), steps)
+            steps = jax.tree.map(lambda *_x: np.stack(_x, axis=0), *steps)
 
-        obs = steps.pop("observation")
-        img = obs.pop("image")
-        img["high"] = img.pop("overhead")
-        img["low"] = img.pop("worm")
-        # to encode as mp4 with ffmpeg
-        img = jax.tree.map(lambda x: x / 255, img)
-        obs["image"] = img
+            steps.pop("discount")
+            steps.pop("reward")
+            steps.pop("is_first")
+            steps.pop("is_last")
+            steps.pop("is_terminal")
+            steps.pop("action")
 
-        # force to be joint actions
-        state = obs.pop("proprio")
-        state = np.concatenate([state["joints"], state["gripper"]], axis=-1)
-        obs["state"] = state
-        steps["action"] = state
-        pprint(steps["action"].shape)
+            obs = steps.pop("observation")
+            img = obs.pop("image")
+            img["high"] = img.pop("overhead")
+            img["low"] = img.pop("worm")
+            img = jax.tree.map(lambda x: x / 255, img)
+            obs["image"] = img
 
-        steps["observation"] = obs
+            state = obs.pop("proprio")
+            state = np.concatenate([state["joints"], state["gripper"]], axis=-1)
+            obs["state"] = state
+            steps["action"] = state
 
-        lang = {
-            "lang": steps.pop("language_embedding"),
-            "task": steps.pop("language_instruction"),
-        }
-        steps["lang"] = lang["lang"]
+            steps["observation"] = obs
 
-        # pprint(spec(steps))
-        step0 = take(steps, 0)
+            lang = {
+                "lang": steps.pop("language_embedding"),
+                "task": steps.pop("language_instruction"),
+            }
+            steps["lang"] = lang["lang"]
 
-        if dataset is None:
-            pprint(spec(step0))
-            dataset = create(
-                repo_id="mhyatt000/demo",
-                robot_type="xarm",
-                example=deepcopy(step0),
-            )
+            step0 = take(steps, 0)
+            self.ensure_dataset(step0)
 
-        # pprint(jax.tree.map(lambda x: (x.shape,x.dtype), steps))
-        task = str(lang["task"][0])
-        for i in tqdm(range(n), leave=False):
-            step = take(steps, i)
-            step = flatten_dict(step, sep=".")
-            step = jax.tree.map(lambda x: torch.from_numpy(x).float(), step)
-            dataset.add_frame(step | {"task": task})
-        dataset.save_episode()
+            self.add_episode(steps, str(lang["task"][0]))
 
-    tags = []
-    dataset.push_to_hub(
-        branch="v0.1",
-        tags=tags,
-        private=False,
-        push_videos=True,
-    )
-    # for i, s in tqdm(enumerate(steps), total=len(steps), leave=False):
+        self.push(branch="v0.1")
+
+
+def main(cfg: BaseReaderConfig) -> None:
+    RLDSConverter(cfg).run()
 
 
 if __name__ == "__main__":
