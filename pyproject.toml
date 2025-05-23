@@ -48,6 +48,8 @@ dev = [
     "pre-commit>=4.2.0",
 ]
 
+[tool.setuptools]
+packages = ["xgym"]
 # TODO(codex) fix so that uv sync adds this project
 # still need to use uv pip install -e .
 
