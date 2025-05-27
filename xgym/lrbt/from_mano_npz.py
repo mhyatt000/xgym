@@ -214,23 +214,44 @@ def main(cfg: MyConfig):
 
         n = len(frames)
         steps = []
-        for frame in tqdm(frames, leave=False):
-            pack = {"img": frame}
-            out = client.infer(pack)
-            if out is None:
-                continue
-            out = postprocess(out, frame)
-            img = out.pop("img")
-            wrist = out.pop("img_wrist")
+        max_failures = 10
+        fail_count = 0
 
-            step = {
-                "observation": {
-                    "image": {"low": img, "wrist": wrist},
-                    "state": out,
+        for i, frame in enumerate(tqdm(frames, leave=False)):
+            try:
+                pack = {"img": frame}
+                out = client.infer(pack)
+                print(f"🔍 Frame {i}: out = {type(out)}")
+                if out is None:
+                    raise ValueError("Empty output from HaMeR (possibly no hand detected)")
+
+                out = postprocess(out, frame)
+                img = out.pop("img")
+                wrist = out.pop("img_wrist")
+
+                step = {
+                    "observation": {
+                        "image": {"low": img, "wrist": wrist},
+                        "state": out,
+                    }
                 }
-            }
-            steps.append(step)
+                steps.append(step)
 
+            except Exception as e:
+                fail_count += 1
+                logger.warning(f"⚠️  Skipping frame {i} in {f.name} due to error: {e}")
+                with open("skipped_frames.txt", "a") as log:
+                    log.write(f"{f.name}, frame {i}: {e}\n")
+
+                if fail_count > max_failures:
+                    logger.error(f"❌ Too many failed frames in {f.name}, skipping entire episode.")
+                    with open("skipped_episodes.txt", "a") as log:
+                        log.write(f"{f.name} skipped after {fail_count} failed frames\n")
+                    steps = []  # Clear out partial steps
+                    break
+
+        if not steps:
+            continue #skip episode if it doesn't have any good frames
         try:
             steps = jax.tree.map(lambda *_x: np.stack(_x, axis=0), *steps)
         except Exception as e:
