@@ -221,7 +221,6 @@ def main(cfg: MyConfig):
             try:
                 pack = {"img": frame}
                 out = client.infer(pack)
-                print(f"🔍 Frame {i}: out = {type(out)}")
                 if out is None:
                     raise ValueError("Empty output from HaMeR (possibly no hand detected)")
 
@@ -244,7 +243,7 @@ def main(cfg: MyConfig):
                     log.write(f"{f.name}, frame {i}: {e}\n")
 
                 if fail_count > max_failures:
-                    logger.error(f"❌ Too many failed frames in {f.name}, skipping entire episode.")
+                    logger.error(f"Too many failed frames in {f.name}, skipping entire episode.")
                     with open("skipped_episodes.txt", "a") as log:
                         log.write(f"{f.name} skipped after {fail_count} failed frames\n")
                     steps = []  # Clear out partial steps
