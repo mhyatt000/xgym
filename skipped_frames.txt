@@ -1,0 +1,166 @@
+ep18_20250522_154901.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep18_20250522_154901.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep38_20250522_152743.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_112150.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep85_20250523_121203.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep45_20250522_152917.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep40_20250523_113637.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep65_20250523_111319.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep32_20250523_110646.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep93_20250523_114911.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 5: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 6: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 7: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 8: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 9: Empty output from HaMeR (possibly no hand detected)
+ep60_20250523_111156.npz, frame 10: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_114959.npz, frame 0: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_114959.npz, frame 1: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_114959.npz, frame 2: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_114959.npz, frame 3: Empty output from HaMeR (possibly no hand detected)
+ep98_20250523_114959.npz, frame 4: Empty output from HaMeR (possibly no hand detected)
+ep0_20250522_154244.npz, frame 0: Error in inference server:
+Traceback (most recent call last):
+  File "/home/jgoldberg/hamer/.venv/lib/python3.11/site-packages/webpolicy/deploy/server.py", line 52, in _handler
+    action = self._policy.infer(obs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jgoldberg/hamer/server/server.py", line 232, in infer
+    out = jax.tree.map(lambda x: x[0], out.data, is_leaf=is_leaf)
+                                       ^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'data'
+
+ep0_20250522_154244.npz, frame 1: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 2: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 3: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 4: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 5: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 6: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 7: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 8: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 9: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep0_20250522_154244.npz, frame 10: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 0: Error in inference server:
+Traceback (most recent call last):
+  File "/home/jgoldberg/hamer/.venv/lib/python3.11/site-packages/webpolicy/deploy/server.py", line 52, in _handler
+    action = self._policy.infer(obs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jgoldberg/hamer/server/server.py", line 232, in infer
+    out = jax.tree.map(lambda x: x[0], out.data, is_leaf=is_leaf)
+                                       ^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'data'
+
+ep79_20250522_153552.npz, frame 1: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 2: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 3: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 4: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 5: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 6: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 7: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 8: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 9: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
+ep79_20250522_153552.npz, frame 10: received 1011 (internal error) Internal server error. Traceback included in previous frame.; then sent 1011 (internal error) Internal server error. Traceback included in previous frame.
