@@ -1,4 +1,5 @@
 import abc
+from rich.pretty import pprint
 import warnings
 from abc import ABC
 from functools import partial
@@ -14,6 +15,7 @@ import xgym
 from rich.pretty import pprint
 from xgym.rlds.util.trajectory import binarize_gripper_actions as binarize
 from xgym.rlds.util.trajectory import scan_noop
+import tensorflow as tf
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -206,7 +208,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
         """Generator of examples for each split."""
 
         # task = "embodiment:Human, task:pick up the red block"  # hardcoded for now
-        taskfile = next(Path().cwd().glob("*.npy"))
+        taskfile = next(Path().cwd().rglob("*.npy"))
         task = taskfile.stem.replace("_", " ")
         lang = np.load(taskfile)
 
@@ -276,7 +278,15 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         "2.0.0": "more data and overhead cam",
         "3.0.0": "relocated setup",
         "4.0.0": "50hz data",
+        "4.0.3": "50hz data",
+        # "4.0.4": "64x64 images",
     }
+
+    imshapes = {
+        224: (224, 224, 3),
+        64: (64, 64, 3),
+    }
+    imshape = imshapes[64]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -288,7 +298,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
 
         def feat_im(doc):
             return tfds.features.Image(
-                shape=(224, 224, 3),
+                shape=self.imshape,
                 dtype=np.uint8,
                 encoding_format="png",
                 doc=doc,
@@ -315,73 +325,77 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
                 }
             )
 
-        return self.dataset_info_from_configs(
-            features=tfds.features.FeaturesDict(
-                {
-                    "steps": tfds.features.Dataset(
-                        {
-                            "observation": tfds.features.FeaturesDict(
-                                {
-                                    "image": tfds.features.FeaturesDict(
-                                        {
-                                            "worm": feat_im(
-                                                doc="Low front logitech camera RGB observation."
-                                            ),
-                                            "side": feat_im(
-                                                doc="Low side view logitech camera RGB observation."
-                                            ),
-                                            "overhead": feat_im(
-                                                doc="Overhead logitech camera RGB observation."
-                                            ),
-                                            "wrist": feat_im(
-                                                doc="Wrist realsense camera RGB observation."
-                                            ),
-                                        }
-                                    ),
-                                    "proprio": feat_prop(),
-                                }
-                            ),
-                            "action": feat_prop(),  # TODO does it make sense to store proprio and  actions?
-                            #
-                            "discount": tfds.features.Scalar(
-                                dtype=np.float32,
-                                doc="Discount if provided, default to 1.",
-                            ),
-                            "reward": tfds.features.Scalar(
-                                dtype=np.float32,
-                                doc="Reward if provided, 1 on final step for demos.",
-                            ),
-                            "is_first": tfds.features.Scalar(
-                                dtype=np.bool_, doc="True on first step of the episode."
-                            ),
-                            "is_last": tfds.features.Scalar(
-                                dtype=np.bool_, doc="True on last step of the episode."
-                            ),
-                            "is_terminal": tfds.features.Scalar(
-                                dtype=np.bool_,
-                                doc="True on last step of the episode if it is a terminal step, True for demos.",
-                            ),
-                            "language_instruction": tfds.features.Text(
-                                doc="Language Instruction."
-                            ),
-                            "language_embedding": tfds.features.Tensor(
-                                shape=(512,),
-                                dtype=np.float32,
-                                doc="Kona language embedding. "
-                                "See https://tfhub.dev/google/universal-sentence-encoder-large/5",
-                            ),
-                        }
-                    ),
-                    "episode_metadata": tfds.features.FeaturesDict({}),
-                }
-            )
+        features = tfds.features.FeaturesDict(
+            {
+                "steps": tfds.features.Dataset(
+                    {
+                        "observation": tfds.features.FeaturesDict(
+                            {
+                                "image": tfds.features.FeaturesDict(
+                                    {
+                                        "worm": feat_im(
+                                            doc="Low front logitech camera RGB observation."
+                                        ),
+                                        "side": feat_im(
+                                            doc="Low side view logitech camera RGB observation."
+                                        ),
+                                        "overhead": feat_im(
+                                            doc="Overhead logitech camera RGB observation."
+                                        ),
+                                        "wrist": feat_im(
+                                            doc="Wrist realsense camera RGB observation."
+                                        ),
+                                    }
+                                ),
+                                "proprio": feat_prop(),
+                            }
+                        ),
+                        "action": feat_prop(),  # TODO does it make sense to store proprio and  actions?
+                        #
+                        "discount": tfds.features.Scalar(
+                            dtype=np.float32,
+                            doc="Discount if provided, default to 1.",
+                        ),
+                        "reward": tfds.features.Scalar(
+                            dtype=np.float32,
+                            doc="Reward if provided, 1 on final step for demos.",
+                        ),
+                        "is_first": tfds.features.Scalar(
+                            dtype=np.bool_, doc="True on first step of the episode."
+                        ),
+                        "is_last": tfds.features.Scalar(
+                            dtype=np.bool_, doc="True on last step of the episode."
+                        ),
+                        "is_terminal": tfds.features.Scalar(
+                            dtype=np.bool_,
+                            doc="True on last step of the episode if it is a terminal step, True for demos.",
+                        ),
+                        "language_instruction": tfds.features.Text(
+                            doc="Language Instruction."
+                        ),
+                        "language_embedding": tfds.features.Tensor(
+                            shape=(512,),
+                            dtype=np.float32,
+                            doc="Kona language embedding. "
+                            "See https://tfhub.dev/google/universal-sentence-encoder-large/5",
+                        ),
+                    }
+                ),
+                "episode_metadata": tfds.features.FeaturesDict({}),
+            }
+        )
+
+        # self.file_format=tfds.core.FileFormat.ARRAY_RECORD
+        return tfds.core.DatasetInfo(
+            builder=self,
+            features=features,
         )
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
 
-        root = Path.home() / f"{self.name}_v{ str(self.VERSION)[0]}"
-        files = list(root.rglob("*.dat"))
+        self.root = Path.home() / f"{self.name}:{str(self.VERSION)}"
+        files = list(self.root.rglob("*.dat"))
         return {"train": self._generate_examples(files)}
 
     def dict_unflatten(self, flat, sep="."):
@@ -412,7 +426,6 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
 
         n = len(ep["time"])
 
-        # pprint(self.spec(ep))
 
         ### cleanup and remap keys
         ep.pop("time")
@@ -430,11 +443,20 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
             print("no worm camera")
             return None
 
-        zeros = lambda: np.zeros((n, 224, 224, 3), dtype=np.uint8)
-        ep["/xgym/camera/wrist"] = ep.pop("/xgym/camera/rs")
+        zeros = lambda: np.zeros((n, *self.imshape), dtype=np.uint8)
+
+
+
+        if "/xgym/camera/wrist" not in ep:
+            ep["/xgym/camera/wrist"] = ep.pop("/xgym/camera/rs")
+        if "/xgym/camera/worm" not in ep:
+            ep["/xgym/camera/worm"] = ep.pop("/xgym/camera/low")
+
         ep["/xgym/camera/overhead"] = ep.pop("/xgym/camera/over", zeros())
         ep["image"] = {
-            k: ep.pop(f"/xgym/camera/{k}", zeros())
+            k: tf.image.resize(
+        ep.pop(f"/xgym/camera/{k}", zeros()),
+        self.imshape[:2], method="bilinear").numpy().astype(np.uint8)
             for k in ["worm", "side", "overhead", "wrist"]
         }
 
@@ -485,6 +507,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
             }
             for i in range(len(ep["proprio"]["position"]))
         ]
+        # pprint(self.spec(ep))
 
         # if you want to skip an example for whatever reason, simply return None
         sample = {"steps": episode, "episode_metadata": {}}
@@ -494,7 +517,8 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
     def _generate_examples(self, ds) -> Iterator[Tuple[str, Any]]:
         """Generator of examples for each split."""
 
-        self.taskfile = next(Path().cwd().glob("*.npy"))
+        pprint(self.root)
+        self.taskfile = next(self.root.glob("*.npy")) # from: cwd
         self.task = self.taskfile.stem.replace("_", " ")
         self.lang = np.load(self.taskfile)
 
