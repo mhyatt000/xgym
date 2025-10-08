@@ -1,31 +1,20 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
 import os.path as osp
-import random
 import time
-from dataclasses import dataclass, field
 
-import cv2
-import draccus
-import envlogger
-import gymnasium as gym
 import numpy as np
-import tensorflow as tf
 import tensorflow_datasets as tfds
-from bsuite.utils.gym_wrapper import DMEnvFromGym, GymFromDMEnv
-from envlogger.backends.tfds_backend_writer import TFDSBackendWriter as TFDSWriter
-from envlogger.testing import catch_env
-from pynput import keyboard
 from tqdm import tqdm
 
-from xgym.controllers import KeyboardController, ModelController, ScriptedController
-from xgym.gyms import Base, Lift, Stack
+from xgym.gyms import Lift
 from xgym.utils import boundary as bd
-from xgym.utils.boundary import PartialRobotState as RS
 
 
 @dataclass
 class RunCFG:
-
     base_dir: str = osp.expanduser("~/data")
     time: str = time.strftime("%Y%m%d-%H%M%S")
     env_name: str = f"xgym-lift-v0-{time}"
@@ -36,7 +25,6 @@ cfg = RunCFG()
 
 
 def main():
-
     os.makedirs(cfg.data_dir, exist_ok=True)
     dataset_config = tfds.rlds.rlds_base.DatasetConfig(
         name="luc-base",
@@ -50,15 +38,9 @@ def main():
                 ),
                 "img": tfds.features.FeaturesDict(
                     {
-                        "camera_0": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=np.uint8
-                        ),
-                        "camera_1": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=np.uint8
-                        ),
-                        "wrist": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=np.uint8
-                        ),
+                        "camera_0": tfds.features.Tensor(shape=(640, 640, 3), dtype=np.uint8),
+                        "camera_1": tfds.features.Tensor(shape=(640, 640, 3), dtype=np.uint8),
+                        "wrist": tfds.features.Tensor(shape=(640, 640, 3), dtype=np.uint8),
                     }
                 ),
             }
@@ -93,9 +75,7 @@ def main():
     ) as env:
     """
     with _env as env:
-
         for _ in tqdm(range(100), desc="episodes"):
-
             env.reset()
             time.sleep(0.2)
             env.start_record()

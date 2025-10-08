@@ -1,15 +1,13 @@
-import time
-from typing import Union
+from __future__ import annotations
 
-import gymnasium as gym
+import time
+
 import numpy as np
 from pynput import keyboard
 
 from xgym import logger
 from xgym.controllers import KeyboardController
 from xgym.gyms.base import Base
-from xgym.utils import boundary as bd
-from xgym.utils.boundary import PartialRobotState as RS
 
 
 class Lift(Base):
@@ -22,9 +20,7 @@ class Lift(Base):
         self._proceed = False
 
         self.kb = KeyboardController()
-        self.kb.register(
-            keyboard.Key.space, lambda: [self.set_mode(2), self.set_mode(2)]
-        )
+        self.kb.register(keyboard.Key.space, lambda: [self.set_mode(2), self.set_mode(2)])
         self.kb.register(keyboard.Key.enter, lambda: self.proceed())
 
         def _set_done():
@@ -41,7 +37,6 @@ class Lift(Base):
         ret = super().reset()
 
         if self.manual:
-
             print("please reset the environment")
             time.sleep(1)
             self.set_mode(2)
@@ -65,7 +60,6 @@ class Lift(Base):
             time.sleep(0.1)
 
         if self.random:
-
             # x= +- 100 y= -300 z= -275
             self.logger.warning("randomizing position")
 

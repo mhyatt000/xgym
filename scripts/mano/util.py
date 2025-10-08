@@ -1,41 +1,26 @@
-import dataclasses
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
 import os.path as osp
-import time
-import traceback
-from dataclasses import dataclass, field
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Dict, List, Optional
 
+from array_util import keyp2bbox
 import cv2
-import imageio
-import jax
-import numpy as np
-import torch
-import tyro
 from hamer.configs import CACHE_DIR_HAMER
 from hamer.datasets.vitdet_dataset import DEFAULT_MEAN, DEFAULT_STD, ViTDetDataset
-from hamer.models import DEFAULT_CHECKPOINT, HAMER, MANO, download_models, load_hamer
-from hamer.utils import SkeletonRenderer, recursive_to
+from hamer.models import download_models, load_hamer
+from hamer.utils import recursive_to, SkeletonRenderer
 from hamer.utils.geometry import perspective_projection
 from hamer.utils.render_openpose import render_openpose
-from hamer.utils.renderer import Renderer, cam_crop_to_full
-from PIL import Image
-from smplx.utils import (
-    Array,
-    MANOOutput,
-    SMPLHOutput,
-    SMPLOutput,
-    SMPLXOutput,
-    Struct,
-    Tensor,
-    to_np,
-    to_tensor,
-)
-from tqdm import tqdm
-
+from hamer.utils.renderer import cam_crop_to_full, Renderer
+import imageio
+import jax
 from log import logger
+import numpy as np
+from PIL import Image
+import torch
 
 # from vitpose_model import ViTPoseModel
 
@@ -44,10 +29,7 @@ from log import logger
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
 
-def infer(
-    i, img, detector, vitpose, device, model, model_cfg, renderer: Renderer, args
-):
-
+def infer(i, img, detector, vitpose, device, model, model_cfg, renderer: Renderer, args):
     print()
     img_path = f"{i}.jpg"
     print(f"Processing {img_path}")
@@ -82,8 +64,8 @@ def infer(
 
     print(poses[0].keys())
 
-    print(f'keypoints shape: {poses[0]["keypoints"].shape}')
-    print(f'keypoints mean: {poses[0]["keypoints"].mean()}')
+    print(f"keypoints shape: {poses[0]['keypoints'].shape}")
+    print(f"keypoints mean: {poses[0]['keypoints'].mean()}")
 
     logger.info("### 3. Extract hand boxes from ViTPose poses")
     bboxes, is_right = extract_hand_keypoints(poses)
@@ -117,7 +99,7 @@ def infer(
 
     logger.info("### 4. get MANO parameters from HaMeR")
 
-    OUT, front = run_hand_reconstruction(
+    OUT, _front = run_hand_reconstruction(
         model_cfg,
         img_cv2,
         bboxes,
@@ -153,9 +135,6 @@ def detect_humans(detector, img_cv2):
     return pred_bboxes, pred_scores
 
 
-from array_util import keyp2bbox
-
-
 def extract_hand_keypoints(poses):
     """the last 42 keypoints are for hands"""
 
@@ -178,10 +157,9 @@ def extract_hand_keypoints(poses):
 
 
 class Store:
-
-    def __init__(self, keys: List[str]):
+    def __init__(self, keys: list[str]):
         self.keys = keys
-        self.data: Dict[str, List] = {key: [] for key in keys}
+        self.data: dict[str, list] = {key: [] for key in keys}
 
         for key in keys:
             setattr(self, key, self.data[key])
@@ -210,30 +188,27 @@ def run_hand_reconstruction(
 
     ### syntax for loading the predictions in batches
     # we arent loading anything new here just img, hand bbox, is_right
-    dataset = ViTDetDataset(
-        model_cfg, img_cv2, bboxes, is_right, rescale_factor=args.rescale_factor
-    )
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=8, shuffle=False, num_workers=0
-    )
+    dataset = ViTDetDataset(model_cfg, img_cv2, bboxes, is_right, rescale_factor=args.rescale_factor)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=0)
 
     S = Store(["verts", "cam_t", "right"])
     OUT = Store(
-        ["img", "personid", "box_center", "box_size", "img_size", "right"]
-        + [
-            "pred_cam",
-            "pred_mano_params",
-            "pred_cam_t",
-            "focal_length",
-            "pred_keypoints_3d",
-            "pred_vertices",
-            "pred_keypoints_2d",
+        [
+            *["img", "personid", "box_center", "box_size", "img_size", "right"],
+            *[
+                "pred_cam",
+                "pred_mano_params",
+                "pred_cam_t",
+                "focal_length",
+                "pred_keypoints_3d",
+                "pred_vertices",
+                "pred_keypoints_2d",
+            ],
+            *["pred_cam_t_full", "img_size", "scaled_focal_length"],
         ]
-        + ["pred_cam_t_full", "img_size", "scaled_focal_length"]
     )
 
     for batch in dataloader:  # for every box in the frame...
-
         print(batch["img"].shape)
 
         # model fwd
@@ -277,27 +252,15 @@ def run_hand_reconstruction(
         out["pred_vertices"] = m.vertices
         """
 
-        pred_cam_t_full, img_size, scaled_focal_length = process_batch(
-            batch, out, model_cfg
-        )
+        pred_cam_t_full, img_size, scaled_focal_length = process_batch(batch, out, model_cfg)
 
-        OUT.add(
-            **{
-                "pred_cam_t_full": pred_cam_t_full,
-                "img_size": img_size,
-                "scaled_focal_length": scaled_focal_length,
-            }
-        )
+        OUT.add(pred_cam_t_full=pred_cam_t_full, img_size=img_size, scaled_focal_length=scaled_focal_length)
 
-        render_hand_view(
-            renderer, batch, out, pred_cam_t_full, img_size, img_path, S, args
-        )
+        render_hand_view(renderer, batch, out, pred_cam_t_full, img_size, img_path, S, args)
 
     # THIS IS THE IMPORTANT PART
     if args.full_frame and len(S.verts) > 0:
-        front = render_front_view(
-            S, renderer, img_size, img_cv2, img_path, scaled_focal_length, args
-        )
+        front = render_front_view(S, renderer, img_size, img_cv2, img_path, scaled_focal_length, args)
 
     return OUT, front
 
@@ -312,22 +275,15 @@ def process_batch(batch, out, model_cfg):
     box_size = batch["box_size"].float()
     img_size = batch["img_size"].float()
 
-    scaled_focal_length = (
-        model_cfg.EXTRA.FOCAL_LENGTH / model_cfg.MODEL.IMAGE_SIZE * img_size.max()
-    )
+    scaled_focal_length = model_cfg.EXTRA.FOCAL_LENGTH / model_cfg.MODEL.IMAGE_SIZE * img_size.max()
 
     pred_cam_t_full = (
-        cam_crop_to_full(pred_cam, box_center, box_size, img_size, scaled_focal_length)
-        .detach()
-        .cpu()
-        .numpy()
+        cam_crop_to_full(pred_cam, box_center, box_size, img_size, scaled_focal_length).detach().cpu().numpy()
     )
     return pred_cam_t_full, img_size, scaled_focal_length
 
 
-def render_hand_view(
-    renderer: Renderer, batch, out, pred_cam_t_full, img_size, img_path, S: Store, args
-):
+def render_hand_view(renderer: Renderer, batch, out, pred_cam_t_full, img_size, img_path, S: Store, args):
     """render hand view and save mesh if needed"""
 
     batch_size = batch["img"].shape[0]
@@ -377,9 +333,7 @@ def render_hand_view(
 
 
 def save_mesh(verts, cam_t, renderer: Renderer, is_right, mpath):
-    tmesh = renderer.vertices_to_trimesh(
-        verts, cam_t.copy(), LIGHT_BLUE, is_right=is_right
-    )
+    tmesh = renderer.vertices_to_trimesh(verts, cam_t.copy(), LIGHT_BLUE, is_right=is_right)
     tmesh.export(mpath)
 
 
@@ -392,11 +346,11 @@ def render_front_view(
     scaled_focal_length,
     args,
 ):
-    misc_args = dict(
-        mesh_base_color=LIGHT_BLUE,
-        scene_bg_color=(-1, 1, 1),
-        focal_length=scaled_focal_length,
-    )
+    misc_args = {
+        "mesh_base_color": LIGHT_BLUE,
+        "scene_bg_color": (-1, 1, 1),
+        "focal_length": scaled_focal_length,
+    }
 
     cam_view = renderer.render_rgba_multiple(
         S.verts,
@@ -408,10 +362,7 @@ def render_front_view(
 
     input_img = img_cv2.astype(np.float32)[:, :, ::-1] / 255.0
     input_img = np.concatenate([input_img, np.ones_like(input_img[:, :, :1])], axis=2)
-    input_img_overlay = (
-        input_img[:, :, :3] * (1 - cam_view[:, :, 3:])
-        + cam_view[:, :, :3] * cam_view[:, :, 3:]
-    )
+    input_img_overlay = input_img[:, :, :3] * (1 - cam_view[:, :, 3:]) + cam_view[:, :, :3] * cam_view[:, :, 3:]
 
     img_fname, _ = os.path.splitext(os.path.basename(img_path))
     cv2.imwrite(
@@ -432,13 +383,11 @@ def init_vitdet():
     .torch/iopath_cache/detectron2/ViTDet/COCO/cascade_mask_rcnn_vitdet_h/f328730692/model_final_f05665.pkl
     """
 
-    import hamer
     from detectron2.config import LazyConfig
+    import hamer
     from hamer.utils.utils_detectron2 import DefaultPredictor_Lazy
 
-    cfg_path = (
-        Path(hamer.__file__).parent / "configs" / "cascade_mask_rcnn_vitdet_h_75ep.py"
-    )
+    cfg_path = Path(hamer.__file__).parent / "configs" / "cascade_mask_rcnn_vitdet_h_75ep.py"
     detectron2_cfg = LazyConfig.load(str(cfg_path))
     detectron2_cfg.train.init_checkpoint = "https://dl.fbaipublicfiles.com/detectron2/ViTDet/COCO/cascade_mask_rcnn_vitdet_h/f328730692/model_final_f05665.pkl"
     for i in range(3):
@@ -449,12 +398,9 @@ def init_vitdet():
 
 def init_regnety():
     from detectron2 import model_zoo
-    from detectron2.config import get_cfg
     from hamer.utils.utils_detectron2 import DefaultPredictor_Lazy
 
-    detectron2_cfg = model_zoo.get_config(
-        "new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ.py", trained=True
-    )
+    detectron2_cfg = model_zoo.get_config("new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ.py", trained=True)
     detectron2_cfg.model.roi_heads.box_predictor.test_score_thresh = 0.5
     detectron2_cfg.model.roi_heads.box_predictor.test_nms_thresh = 0.4
     detector = DefaultPredictor_Lazy(detectron2_cfg)
@@ -501,7 +447,6 @@ def cam_full_to_crop(cam_full, box, img_size, focal_length=5000.0):
 
 
 def plot_cropped(img, out):
-
     points = out["pred_keypoints_3d"] + out["pred_cam_t_full"][:, None]
     n = 1
     points = points[n]
@@ -534,12 +479,8 @@ def plot_cropped(img, out):
         points=points_3d_scaled[None],
         translation=torch.zeros_like(cam_crop)[None],
         focal_length=torch.full((1, 2), focal_length),
-        camera_center=torch.tensor(
-            [img.shape[1] / 2 - w / 2, img.shape[0] - h / 2], dtype=torch.float
-        ).reshape(1, 2),
-    )[
-        0
-    ]  # remove batch dim
+        camera_center=torch.tensor([img.shape[1] / 2 - w / 2, img.shape[0] - h / 2], dtype=torch.float).reshape(1, 2),
+    )[0]  # remove batch dim
 
     # Add confidence = 1
     points_2d = torch.cat([points_2d, torch.ones((points_2d.shape[0], 1))], dim=1)
@@ -587,22 +528,15 @@ def main(cfg: Config):
     vpath = osp.expanduser("~/output.mp4")
     reader = imageio.get_reader(vpath)
     for i, img in enumerate(reader):
-
         try:
-            out, front = infer(
-                i, img, detector, vitpose, device, model, model_cfg, renderer
-            )
-            out = jax.tree.map(
-                lambda x: x[0], out.data, is_leaf=is_leaf
-            )  # everything is wrapped in list
+            out, front = infer(i, img, detector, vitpose, device, model, model_cfg, renderer)
+            out = jax.tree.map(lambda x: x[0], out.data, is_leaf=is_leaf)  # everything is wrapped in list
 
             from flax.traverse_util import flatten_dict
 
             out = flatten_dict(out)
 
-            clean = lambda x: (
-                x.detach().cpu().numpy() if isinstance(x, torch.Tensor) else x
-            )
+            clean = lambda x: (x.detach().cpu().numpy() if isinstance(x, torch.Tensor) else x)
             out = jax.tree.map(clean, out)
 
             pprint(spec(out))

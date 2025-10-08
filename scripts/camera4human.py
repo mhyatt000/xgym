@@ -1,35 +1,28 @@
-import time
-import jax
-from enum import Enum
-import datetime
+from __future__ import annotations
+
 from dataclasses import dataclass
+import datetime
+from enum import Enum
 from pathlib import Path
+import threading
+import time
 
 import cv2
-import imageio
+from evdev import ecodes, InputDevice
+import jax
 import numpy as np
+from rich.pretty import pprint
 from tqdm import tqdm
 import tyro
 
-from xgym.utils import camera as cu
 import xgym
-
-
-from flax.traverse_util import flatten_dict
-
-from evdev import InputDevice, ecodes
-import threading
-
-
-from rich.pretty import pprint
-from typing import Union, Optional, Callable
 
 
 class MyCamera:
     def __repr__(self) -> str:
         return f"MyCamera(device_id={'TODO'})"
 
-    def __init__(self, cam: Union[int, cv2.VideoCapture], fps=30):
+    def __init__(self, cam: int | cv2.VideoCapture, fps=30):
         self.cam = cv2.VideoCapture(cam) if isinstance(cam, int) else cam
         self.thread = None
 
@@ -43,7 +36,6 @@ class MyCamera:
         time.sleep(0.1)
 
     def start(self):
-
         self._recording = True
 
         def _record():
@@ -75,7 +67,6 @@ class MyCamera:
 
 
 class FootPedalRunner:
-
     def __init__(
         self,
         path="/dev/input/by-id/usb-PCsensor_FootSwitch-event-kbd",
@@ -105,17 +96,15 @@ class FootPedalRunner:
         """
 
         for event in self.device.read_loop():
-            if event.type == ecodes.EV_KEY:
-                if event.code in self.pmap:
+            if event.type == ecodes.EV_KEY and event.code in self.pmap:
+                p = self.pmap[event.code]
+                new = event.value  # 0=release, 1=press, 2=hold/repeat
 
-                    p = self.pmap[event.code]
-                    new = event.value  # 0=release, 1=press, 2=hold/repeat
+                if changed := (self.value[p] != new):
+                    self.value[p] = new
 
-                    if changed := (self.value[p] != new):
-                        self.value[p] = new
-
-                        if self.callback:
-                            self.callback(self.value)
+                    if self.callback:
+                        self.callback(self.value)
 
 
 class Mode(str, Enum):
@@ -125,7 +114,6 @@ class Mode(str, Enum):
 
 @dataclass
 class Config:
-
     dir: str  # path to the directory where the data will be saved
 
     episodes: int = 100  # number of episodes to record
@@ -137,15 +125,22 @@ class Config:
     mode: Mode = Mode.COLLECT
     show_first_only: bool = False  # show only the first frame of each episode
 
-    def __post_init__(self):
+    # ===
+    # task: str = input("Task: ").lower()
+    # base_dir: str = Path("~/data").expanduser()
+    # time: str = time.strftime("%Y%m%d-%H%M%S")
+    # env_name: str = f"xgym-mano-{task}-{time}"
+    # data_dir: str = base_dir / env_name
+    # nsteps: int = 300
+    # nepisodes: int = 100
+    # >>> 3bda70f (gym)
 
+    def __post_init__(self):
         self.dir = Path(self.dir)
         self.dir.mkdir(parents=True, exist_ok=True)
 
         if not self.cammap:
-            xgym.logger.error(
-                "Please check the camera mapping with camera.py before running this script."
-            )
+            xgym.logger.error("Please check the camera mapping with camera.py before running this script.")
 
     @property
     def nsteps(self):
@@ -156,14 +151,20 @@ def spec(arr):
     return jax.tree.map(lambda x: x.shape, arr)
 
 
-def flush(episode: dict[list], ep: int, cfg: Config):
-
+def _flush(episode: dict[list], ep: int, cfg: Config):
     episode = {k: np.array(v) for k, v in episode.items()}
     pprint(spec(episode))
     # quit()
     # episode = {CAM_MAP[k]: v for k, v in episode.items() if k in CAM_MAP}
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     out = str(cfg.dir / f"ep{ep}_{now}")
+
+
+def flush(episode: dict, ep: int, cfg: RunCFG):
+    raise NotImplementedError("fix me")
+    print("what", len(episode))
+    episode = {CAM_MAP[k]: v for k, v in episode.items() if k in CAM_MAP}
+    out = str(cfg.data_dir / f"ep{ep}")
     np.savez(out, **episode)
     # cu.save_frames(v, str(cfg.dir / f"ep{ep}_{k}"), ext="mp4", fps=30)
 
@@ -173,14 +174,11 @@ def recolor(img):
 
 
 def wait_for_pedal(pedal: FootPedalRunner, cams: dict[int, MyCamera], show: bool):
-
     pprint("press pedal to start recording")
 
     def border(img):
         """makes a red border around the image"""
-        img = cv2.copyMakeBorder(
-            img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=(0, 0, 255)
-        )
+        img = cv2.copyMakeBorder(img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=(0, 0, 255))
         return img
 
     while True:
@@ -199,7 +197,6 @@ def wait_for_pedal(pedal: FootPedalRunner, cams: dict[int, MyCamera], show: bool
 
 
 def main(cfg: Config):
-
     if cfg.mode == Mode.PLAY:
         eps = list(cfg.dir.glob("ep*.npz"))
         wait = int(1000 / cfg.fps)  # convert fps to ms
@@ -211,9 +208,11 @@ def main(cfg: Config):
                 print(f"Error loading {ep}: {e}")
                 ep.unlink()  # remove the file
                 continue
-            data = {k: v for k, v in data.items()}
+            data = dict(data.items())
 
-            n = len(data[list(data.keys())[0]])
+            raise NotImplementedError("fix me")
+            # n = len(data[list(data.keys())[0]])
+
             # pprint(spec(data))
             for i in tqdm(range(n), leave=False):
                 steps = {k: v[i] for k, v in data.items()}
@@ -258,11 +257,9 @@ def main(cfg: Config):
     wait_for_pedal(pedal, cams, True)
 
     print(cams)
-    for ep in tqdm(range(cfg.episodes)):  # loop episodes
-
-        frames = {k: [] for k in cams.keys()}
+    for ep in tqdm(range(cfg.nepisodes), leave=False):
+        frames = {k: [] for k in cams}
         for step in tqdm(range(cfg.nsteps), leave=False):
-
             tic = time.time()
 
             imgs = {k: cam.read()[1] for k, cam in cams.items()}
@@ -290,7 +287,6 @@ def main(cfg: Config):
             toc = time.time()
             elapsed = toc - tic
             time.sleep(max(0, dt - elapsed))
-
         flush(frames, ep, cfg)
         wait_for_pedal(pedal, cams, True)
 

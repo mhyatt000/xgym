@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from collections import OrderedDict
 
 from gymnasium.envs.registration import register
 
 from .base import Base
+from .human import Human
 from .lift import Lift
 from .stack import Stack
-from .human import Human
 
 register(
     id="xgym/base-v0",

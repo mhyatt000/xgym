@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 import shutil
 
 import cv2
+import draccus
 import jax
 import numpy as np
 from tqdm import tqdm
@@ -20,11 +25,11 @@ from xgym.rlds.util.transform import center_crop
 def stack(seq: list[dict]):
     """Stacks all frames in the seq into arrays for saving."""
     stacked = {}
-    for k in seq[0].keys():
+    for k in seq[0]:
         stacked[k] = np.stack([s[k] for s in seq], axis=0)
     return stacked
 
-    stacked = {k: np.stack([s[k] for s in seq], axis=0) for k in seq[0].keys()}
+    stacked = {k: np.stack([s[k] for s in seq], axis=0) for k in seq[0]}
     return stacked
 
 
@@ -111,9 +116,9 @@ def postprocess_sequence(seq: list[dict]):
         def overbatched(k):
             return (len(example[k]) + 1) < len(s[k].shape)
 
-        while any(overbatched(k) for k in s.keys()):
-            ob = {k: overbatched(k) for k in s.keys()}
-            for k in s.keys():
+        while any(overbatched(k) for k in s):
+            ob = {k: overbatched(k) for k in s}
+            for k in s:
                 if ob[k]:
                     s[k] = s[k].squeeze()
 
@@ -126,7 +131,7 @@ def postprocess_sequence(seq: list[dict]):
                 return s[k][0]
             return s[k][is_right]
 
-        return {k: _select(s, k) for k in s.keys()}
+        return {k: _select(s, k) for k in s}
 
     # print("Selecting hand...")
     out = [select_hand(s) for s in seq]
@@ -163,12 +168,6 @@ def solve_2d(out: dict):
     return out
 
 
-from dataclasses import dataclass, field
-from typing import Union
-
-import draccus
-
-
 @dataclass
 class ServerCN:
     host: str
@@ -178,7 +177,7 @@ class ServerCN:
 @dataclass
 class MultiServerCN:
     # csv
-    servers: Union[str, list[str]] = field(default_factory=lambda: [])
+    servers: str | list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if isinstance(self.servers, str):
@@ -218,8 +217,6 @@ def main(cfg: MultiServerCN):
 
                 out = remap_keys(out)
                 return out
-
-            from concurrent.futures import ThreadPoolExecutor
 
             servergen = (servers[i % len(servers)] for i in range(len(v)))
 

@@ -1,21 +1,19 @@
-import gymnasium as gym
+from __future__ import annotations
+
 import random
 import time
+
 import numpy as np
 from pynput import keyboard
 
 from xgym.controllers import KeyboardController
 from xgym.gyms.base import Base
-
-
 from xgym.utils import boundary as bd
 from xgym.utils.boundary import PartialRobotState as RS
 
-from typing import Union
-
 
 class Human(Base):
-    def __init__(self, mode: Union[None, "manual"] = None):
+    def __init__(self, mode: None | manual = None):
         super().__init__()
 
         self.mode = mode
@@ -35,14 +33,8 @@ class Human(Base):
                     max=RS(cartesian=[500, -125, 300]),
                 ),
                 bd.AngularBoundary(
-                    min=RS(
-                        aa=np.array([-np.pi / 4, -np.pi / 4, -np.pi / 2])
-                        + self.start_angle
-                    ),
-                    max=RS(
-                        aa=np.array([np.pi / 4, np.pi / 4, np.pi / 2])
-                        + self.start_angle
-                    ),
+                    min=RS(aa=np.array([-np.pi / 4, -np.pi / 4, -np.pi / 2]) + self.start_angle),
+                    max=RS(aa=np.array([np.pi / 4, np.pi / 4, np.pi / 2]) + self.start_angle),
                 ),
                 bd.GripperBoundary(min=10, max=800),
             ]

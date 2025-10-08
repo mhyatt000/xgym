@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 
 import matplotlib as mpl
@@ -8,6 +10,7 @@ mpl.use("Agg")
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
+import threading
 
 import cv2
 import jax
@@ -35,15 +38,11 @@ def spec(thing: dict[str, np.ndarray]):
     return jax.tree.map(lambda x: x.shape, thing)
 
 
-import threading
-from typing import Union
-
-
 class MyCamera:
     def __repr__(self) -> str:
         return f"MyCamera(device_id={'TODO'})"
 
-    def __init__(self, cam: Union[int, cv2.VideoCapture]):
+    def __init__(self, cam: int | cv2.VideoCapture):
         self.cam = cv2.VideoCapture(cam) if isinstance(cam, int) else cam
         self.thread = None
 
@@ -95,9 +94,9 @@ class NPZVideoReader:
             return
         f = self.files.pop(0)
         ep = np.load(f, allow_pickle=True)
-        ep = {k: ep[k] for k in ep.keys()}
+        ep = {k: ep[k] for k in ep}
         pprint(spec(ep))  # assuming spec() is defined elsewhere
-        self.frames = ep[list(ep.keys())[0]]
+        self.frames = next(iter(ep.keys()))
         self.idx = 0
 
     def __iter__(self):
@@ -178,7 +177,7 @@ def main(cfg: Config):
     hist = deque(maxlen=10)
     base_hist = []
     while True:
-        ret, frame = cam.read()
+        _ret, frame = cam.read()
 
         # import xgym.utils.camera as cu
         # frame = cu.square(frame)

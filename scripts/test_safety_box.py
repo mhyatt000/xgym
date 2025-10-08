@@ -1,4 +1,5 @@
-import xgym as xg
+from __future__ import annotations
+
 from xgym import utils as xgu
 
 # TEST CartesianBoundary

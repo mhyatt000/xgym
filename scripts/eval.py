@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 import os
 import os.path as osp
@@ -40,7 +42,6 @@ def main(cfg: RunCFG):
     print(cfg)
 
     os.makedirs(cfg.data_dir, exist_ok=True)
-
     raise NotImplementedError("old ModelController is depricated")
     model = ModelController(
         cfg.host,
@@ -73,9 +74,7 @@ def main(cfg: RunCFG):
             # remap obs
             print(obs["img"].keys())
 
-            obs["img"] = jax.tree_map(
-                lambda x: cv2.resize(np.array(x), (224, 224)), obs["img"]
-            )
+            obs["img"] = jax.tree_map(lambda x: cv2.resize(np.array(x), (224, 224)), obs["img"])
 
             cv2.imshow(
                 "data Environment",
@@ -108,9 +107,9 @@ def main(cfg: RunCFG):
                 # action[-1] *= 0 if action[-1] < 0.2 else 1
                 # action[-1] = 1 if action[-1] > 0.8 else action[-1]
 
-                print(f"action: {[round(x,4) for x in action.tolist()]}")
+                print(f"action: {[round(x, 4) for x in action.tolist()]}")
 
-                obs, reward, done, info = env.step(action)
+                obs, _reward, _done, _info = env.step(action)
                 # time.sleep(dt)
 
                 toc = time.time()

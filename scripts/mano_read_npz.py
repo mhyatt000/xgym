@@ -1,33 +1,31 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
-import os.path as osp
-import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import cv2
 import draccus
 import numpy as np
 from tqdm import tqdm
+
 from xgym.utils import camera as cu
 
 
 @dataclass
 class RunCFG:
-
     auto_keep: bool = False
     path: str = None
 
 
 @draccus.wrap()
 def main(cfg: RunCFG):
-
     print(cfg)
     assert cfg.path is not None
 
     ds = [str(x) for x in Path(cfg.path).glob("*.npz")]
 
     for path in tqdm(ds):
-
         e = np.load(path, allow_pickle=True)
         e = {x: e[x] for x in e.files}
 

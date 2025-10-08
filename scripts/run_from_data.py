@@ -1,37 +1,31 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
 import os.path as osp
 import time
-from dataclasses import dataclass, field
 
 import cv2
-import draccus
 
 # import envlogger
-import gymnasium as gym
 import jax
 import numpy as np
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from bsuite.utils.gym_wrapper import DMEnvFromGym, GymFromDMEnv
 
 # from envlogger.backends.tfds_backend_writer import \
 # TFDSBackendWriter as TFDSWriter
 # from envlogger.testing import catch_env
-from pynput import keyboard
+import tensorflow_datasets as tfds
 from tqdm import tqdm
 
-from xgym.controllers import KeyboardController, ModelController, ScriptedController
-from xgym.gyms import Base, Lift, Stack
-from xgym.utils import boundary as bd
+from xgym.controllers import ModelController
+from xgym.gyms import Lift
 from xgym.utils import camera as cu
-from xgym.utils.boundary import PartialRobotState as RS
 
 np.set_printoptions(suppress=True)
 
 
 @dataclass
 class RunCFG:
-
     base_dir: str = osp.expanduser("~/data")
     time: str = time.strftime("%Y%m%d-%H%M%S")
     env_name: str = f"xgym-liftmodel-v0-{time}"
@@ -69,7 +63,6 @@ def make_target(env):
 
 
 def main():
-
     os.makedirs(cfg.data_dir, exist_ok=True)
 
     env = Lift(out_dir=cfg.data_dir, random=False)
@@ -86,7 +79,6 @@ def main():
     target = None
 
     for ep in tqdm(ds, desc="Episodes"):
-
         obs = env.reset()
         env.set_mode(7)
         time.sleep(0.4)
@@ -96,7 +88,6 @@ def main():
         # obs = timestep.observation
         _action = None
         for step in tqdm(ep["steps"], desc=f"EP{ep}"):  # 3 episodes
-
             step = jax.tree_map(lambda x: np.array(x), step)
             spec = lambda x: x.shape
             print(jax.tree.map(spec, step))
@@ -107,7 +98,7 @@ def main():
             _pos = env.position.to_vector()
             if _action is None:  # get to the random starting point
                 _action = position - _pos
-                env.logger.error(f"stepping to the start")
+                env.logger.error("stepping to the start")
                 # env.step(_action)
                 # time.sleep(2)
             else:
@@ -129,9 +120,7 @@ def main():
             )
             cv2.waitKey(1)  # 1 ms delay to allow for rendering
 
-            obs["img"] = jax.tree_map(
-                lambda x: cv2.resize(np.array(x), (224, 224)), obs["img"]
-            )
+            obs["img"] = jax.tree_map(lambda x: cv2.resize(np.array(x), (224, 224)), obs["img"])
             cv2.imshow(
                 "irl Environment",
                 cv2.cvtColor(cu.tile(cu.writekeys(obs["img"])), cv2.COLOR_RGB2BGR),
@@ -155,11 +144,10 @@ def main():
             ).copy()
 
             for action in actions:
-
                 action[:3] *= int(1e3)
                 action[-1] *= 0.95 if action[-1] < 0.7 else 1
                 # action = action / 2
-                print(f"action: {[round(x,4) for x in action.tolist()]}")
+                print(f"action: {[round(x, 4) for x in action.tolist()]}")
                 # _env.render(mode="human")
 
                 # target = make_target(env) if target is None else target
@@ -168,7 +156,7 @@ def main():
                 # print("target", target.round(3))
                 print(action.round(3))
 
-                obs, reward, done, info = env.step(action)
+                obs, _reward, _done, _info = env.step(action)
                 time.sleep(3 * dt)
                 # toc = time.time()
                 # elapsed = toc - tic

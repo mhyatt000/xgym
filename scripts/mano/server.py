@@ -1,23 +1,19 @@
-import os
-import time
-import traceback
-from collections import deque
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+import os
+import traceback
 
 import cv2
+from hamer.configs import CACHE_DIR_HAMER
+from hamer.models import DEFAULT_CHECKPOINT, download_models, load_hamer
+from hamer.utils import SkeletonRenderer
+from hamer.utils.renderer import Renderer
 import jax
 import numpy as np
+from rich.pretty import pprint
 import torch
 import tyro
-from hamer.configs import CACHE_DIR_HAMER
-from hamer.models import DEFAULT_CHECKPOINT, HAMER, MANO, download_models, load_hamer
-from hamer.utils import SkeletonRenderer, recursive_to
-from hamer.utils.renderer import Renderer, cam_crop_to_full
-from jax import numpy as jnp
-from rich.pretty import pprint
-
-from array_util import stack_and_pad
 from util import infer, init_detector
 
 # from vitpose_model import ViTPoseModel
@@ -54,7 +50,6 @@ def unnormalize(img):
 
 
 class Policy(BasePolicy):
-
     def __init__(self, cfg):
         self.cfg = cfg
 
@@ -65,17 +60,13 @@ class Policy(BasePolicy):
         pprint(self.model_cfg)
 
         # Setup HaMeR model
-        self.device = (
-            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        )
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.model = self.model.to(self.device)
         self.model.eval()
 
         self.detector = init_detector(cfg)  # Load detector
         self.vitpose = ViTPoseModel(self.device)  # keypoint detector
-        self.renderer = Renderer(
-            self.model_cfg, faces=self.model.mano.faces
-        )  # Setup the renderer
+        self.renderer = Renderer(self.model_cfg, faces=self.model.mano.faces)  # Setup the renderer
         self.skrenderer = SkeletonRenderer(self.model_cfg)
 
         print("policy init done")
@@ -86,7 +77,6 @@ class Policy(BasePolicy):
 
     def infer(self, obs: dict):
         try:
-
             img = obs["img"]
             out = infer(
                 i=0,
@@ -106,9 +96,7 @@ class Policy(BasePolicy):
             out = jax.tree.map(lambda x: x[0], out.data, is_leaf=is_leaf)
             out = flatten(out)
 
-            clean = lambda x: (
-                x.detach().cpu().numpy() if isinstance(x, torch.Tensor) else x
-            )
+            clean = lambda x: (x.detach().cpu().numpy() if isinstance(x, torch.Tensor) else x)
             out = jax.tree.map(clean, out)
 
             pprint(spec(out))
@@ -127,7 +115,6 @@ class Policy(BasePolicy):
 
 @dataclass
 class PolicyConfig:
-
     checkpoint: str = DEFAULT_CHECKPOINT  # Path to pretrained model checkpoint
     img_folder: str = "example_data"  # Folder with input images
     out_folder: str = "out_demo"  # Output folder to save rendered results
@@ -137,7 +124,7 @@ class PolicyConfig:
     batch_size: int = 1  # Batch size for inference/fitting
     rescale_factor: float = 2.0  # Factor for padding the bbox
     body_detector: str = "vitdet"  # Using regnety improves runtime and reduces memory
-    file_type: List[str] = field(default_factory=lambda: ["*.jpg", "*.png"])
+    file_type: list[str] = field(default_factory=lambda: ["*.jpg", "*.png"])
     device: int = 0  # Cuda device to run the server on
 
 
@@ -152,7 +139,6 @@ class Config:
 
 
 def main(cfg: Config):
-
     pprint(cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cfg.policy.device)
 

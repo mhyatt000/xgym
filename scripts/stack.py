@@ -1,29 +1,22 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
 import os.path as osp
-import time
-from dataclasses import dataclass, field
 
-import draccus
+from bsuite.utils.gym_wrapper import DMEnvFromGym
 import envlogger
-import gymnasium as gym
-import numpy as np
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from bsuite.utils.gym_wrapper import DMEnvFromGym, GymFromDMEnv
 from envlogger.backends.tfds_backend_writer import TFDSBackendWriter as TFDSWriter
-from envlogger.testing import catch_env
-from pynput import keyboard
+import numpy as np
+import tensorflow_datasets as tfds
 from tqdm import tqdm
 
-from xgym.controllers import KeyboardController, ModelController, ScriptedController
-from xgym.gyms import Base, Stack
-from xgym.utils import boundary as bd
+from xgym.gyms import Stack
 from xgym.utils.boundary import PartialRobotState as RS
 
 
 @dataclass
 class RunCFG:
-
     base_dir: str = osp.expanduser("~/data")
     env_name: str = "xgym-stack-v0"
     data_dir: str = osp.join(base_dir, env_name)
@@ -33,7 +26,6 @@ cfg = RunCFG()
 
 
 def main():
-
     os.makedirs(cfg.data_dir, exist_ok=True)
     dataset_config = tfds.rlds.rlds_base.DatasetConfig(
         name="luc-base",
@@ -47,12 +39,8 @@ def main():
                 ),
                 "img": tfds.features.FeaturesDict(
                     {
-                        "camera_0": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=np.uint8
-                        ),
-                        "wrist": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=np.uint8
-                        ),
+                        "camera_0": tfds.features.Tensor(shape=(640, 640, 3), dtype=np.uint8),
+                        "wrist": tfds.features.Tensor(shape=(640, 640, 3), dtype=np.uint8),
                     }
                 ),
             }
@@ -76,9 +64,7 @@ def main():
             ds_config=dataset_config,
         ),
     ) as env:
-
         for _ in tqdm(range(50)):  # 3 episodes
-
             env.reset()
 
             ### planner algorithm
@@ -90,15 +76,13 @@ def main():
             for s in steps:
                 print()
                 print(s)
-                absolute = _env.kin_fwd(s) + [0]
+                absolute = [*_env.kin_fwd(s), 0]
                 act = np.array(absolute) - _env.position.to_vector()
                 act[-1] = 0.00
                 print(act)
                 env.step(act.astype(np.float64))
 
-            env.step(
-                np.array([0, 0, 0, 0, 0, 0, 280 - _env.gripper]).astype(np.float64)
-            )
+            env.step(np.array([0, 0, 0, 0, 0, 0, 280 - _env.gripper]).astype(np.float64))
             env.step(np.array([0, 0, 100, 0, 0, 0, 0]).astype(np.float64))
 
             p2 = RS.from_vector(_env.kin_fwd(p2))
@@ -109,7 +93,7 @@ def main():
             steps = [(p2 * a) + (pos * (1 - a)) for a in np.linspace(0, 1, 5)]
 
             for s in steps:
-                absolute = _env.kin_fwd(s) + [0]
+                absolute = [*_env.kin_fwd(s), 0]
                 act = np.array(absolute) - _env.position.to_vector()
                 act[-1] = 0
                 print(act)

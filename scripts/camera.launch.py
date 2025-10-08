@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 import os.path as osp
 import time
 
-import draccus
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
-from xgym.nodes.camera import CameraNode
+from xgym.nodes.camera import Camera
 from xgym.nodes.viz import FastImageViewer
 
 # import atexit
@@ -16,6 +17,7 @@ from xgym.nodes.viz import FastImageViewer
 # from xgym.utils import boundary as bd
 # from xgym.utils import camera as cu
 # from xgym.controllers import (KeyboardController, ScriptedController, SpaceMouseController)
+# from xgym.model_controllers import ModelController
 
 
 @dataclass
@@ -31,17 +33,16 @@ class RunCFG:
     gello: bool = False
 
 
-@draccus.wrap()
 def main(cfg: RunCFG):
     """Main training loop with environment interaction."""
     # Start environment-related scripts
     rclpy.init()
 
     cameras = [
-        CameraNode(idx=0, name="worm"),
-        CameraNode(idx=10, name="side"),
-        CameraNode(idx=8, name="over"),
-        CameraNode(idx=6, name="rs"),
+        Camera(idx=0, name="worm"),
+        Camera(idx=10, name="side"),
+        Camera(idx=8, name="over"),
+        Camera(idx=6, name="rs"),
     ]
 
     # nodes = nodes | {x.name: x for x in cameras}

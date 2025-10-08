@@ -1,7 +1,7 @@
-import time
-from typing import Union
+from __future__ import annotations
 
-import gymnasium as gym
+import time
+
 import numpy as np
 from pynput import keyboard
 
@@ -13,7 +13,7 @@ from xgym.utils.boundary import PartialRobotState as RS
 
 
 class Stack(Base):
-    def __init__(self, mode: Union[None, "manual"] = None):
+    def __init__(self, mode: None | manual = None):
         super().__init__()
 
         self.mode = mode
@@ -33,14 +33,8 @@ class Stack(Base):
                     max=RS(cartesian=[500, -250, 300]),
                 ),
                 bd.AngularBoundary(
-                    min=RS(
-                        aa=np.array([-np.pi / 4, -np.pi / 4, -np.pi / 2])
-                        + self.start_angle
-                    ),
-                    max=RS(
-                        aa=np.array([np.pi / 4, np.pi / 4, np.pi / 2])
-                        + self.start_angle
-                    ),
+                    min=RS(aa=np.array([-np.pi / 4, -np.pi / 4, -np.pi / 2]) + self.start_angle),
+                    max=RS(aa=np.array([np.pi / 4, np.pi / 4, np.pi / 2]) + self.start_angle),
                 ),
                 bd.GripperBoundary(min=10, max=800),
             ]

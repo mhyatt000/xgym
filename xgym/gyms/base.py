@@ -1,32 +1,29 @@
+from __future__ import annotations
+
+from abc import abstractmethod
 import logging
-import os
 import os.path as osp
 import threading
 import time
-from abc import ABC, abstractmethod
-from typing import List, Union
 
 import cv2
-import gym as oaigym
-from gym import spaces
-
-from xgym.utils import camera as cu
-
-_ = None
-import gymnasium as gym
-import numpy as np
-from gello.cameras.camera import CameraDriver
 
 # from misc.boundary import BoundaryManager
-from gello.cameras.realsense_camera import RealSenseCamera, get_device_ids
-from gello.data_utils.keyboard_interface import KBReset
+from gello.cameras.realsense_camera import get_device_ids, RealSenseCamera
+from gym import spaces
+import gymnasium as gym
+import jax
+import numpy as np
 from xarm.wrapper import XArmAPI
 
-from xgym import logger
 from xgym.utils import boundary as bd
+from xgym.utils import camera as cu
 from xgym.utils.boundary import PartialRobotState as RS
 
 # from misc.robot import XarmRobot
+
+# redefinition?
+# from xgym import logger
 
 
 logger = logging.getLogger("xgym")
@@ -43,7 +40,7 @@ def timer(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        logger.debug(f"{func.__name__} took {end-start} seconds.")
+        logger.debug(f"{func.__name__} took {end - start} seconds.")
         return result
 
     return wrapper
@@ -55,11 +52,11 @@ def clear_camera_buffer(camera: cv2.VideoCapture, nframes=0):
         camera.grab()
 
 
-class MyCamera(CameraDriver):
+class MyCamera:
     def __repr__(self) -> str:
         return f"MyCamera(device_id={'TODO'})"
 
-    def __init__(self, cam: Union[int, cv2.VideoCapture]):
+    def __init__(self, cam: int | cv2.VideoCapture):
         self.cam = cv2.VideoCapture(cam) if isinstance(cam, int) else cam
         self.thread = None
 
@@ -100,7 +97,7 @@ class MyCamera(CameraDriver):
             del self.thread
 
     def read(self):
-        ret, img = self.cam.retrieve()
+        _ret, img = self.cam.retrieve()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img
 
@@ -124,9 +121,7 @@ class Base(gym.Env):
 
         self.space = space
         self.imsize = 640
-        self.action_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
-        )  # xyzrpyg
+        self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32)  # xyzrpyg
 
         """
         self.observation_space = spaces.Dict(
@@ -251,11 +246,14 @@ class Base(gym.Env):
         device_ids = get_device_ids()
         if len(device_ids) == 0:
             logger.error("No RealSense devices found.")
+
+        # real sense disabled temp by matt
         self.rs = RealSenseCamera(flip=False, device_id=device_ids[0])
         logger.info("Cameras initialized.")
 
         # logitech cameras
         cams = cu.list_cameras()
+        print(cams)
         self.cams = {k: MyCamera(cam) for k, cam in cams.items()}
 
         # must be manually verified if changed
@@ -330,14 +328,14 @@ class Base(gym.Env):
 
     @timer
     def observation(self):
-
         imgs = self.look()
         pos = self.position
 
         if pos.gripper is None:
-            pos.gripper = self.gripper
-        if pos.gripper is None:
-            pos.gripper = self._obs["robot"]["position"][-1]
+            # pos.gripper = self.gripper
+            pos.gripper = 0
+        # if pos.gripper is None:
+        # pos.gripper = self._obs["robot"]["position"][-1]
 
         self._obs = {
             "robot": {
@@ -350,7 +348,6 @@ class Base(gym.Env):
 
     @abstractmethod
     def reset(self):
-
         self._done = False
         self.set_mode(0)
         self.robot.set_gripper_position(800, wait=False)
@@ -384,11 +381,7 @@ class Base(gym.Env):
         # episode is list of dicts
         logger.info("Flushing episode to disk.")
         if len(self.episode):
-            import jax
-
-            episode = jax.tree.map(
-                lambda x, *y: np.stack([x, *y]), self.episode[0], *self.episode[1:]
-            )
+            episode = jax.tree.map(lambda x, *y: np.stack([x, *y]), self.episode[0], *self.episode[1:])
 
             def du_flatten(d, parent_key="", sep="."):
                 items = []
@@ -459,7 +452,6 @@ class Base(gym.Env):
     @timer
     @abstractmethod
     def _step(self, action, force_grip=False, wait=True):
-
         if self.space == "cartesian":
             assert len(action) == 7
             act = RS.from_vector(action)
@@ -532,7 +524,7 @@ class Base(gym.Env):
     @timer
     def look(self):
         size = (self.imsize, self.imsize)
-        image, depth = self.rs.read()
+        image, _depth = self.rs.read()
         image = cv2.resize(image, size)
         imgs = {f"{k}": cam.read() for k, cam in self.cams.items()}
         imgs["wrist"] = image
@@ -567,7 +559,6 @@ class Base(gym.Env):
             raise ValueError("Torque limit exceeded")
 
     def safety_check(self, action):
-
         # self.safety_torque_limit()
         # logger.debug(self.position)
 
@@ -583,7 +574,7 @@ class Base(gym.Env):
                 _clipped = self.boundary.clip(new)
                 clipped = _clipped - self.position
                 clipped.gripper = _clipped.gripper
-                logger.warn(f"clipping action: A to B")
+                logger.warn("clipping action: A to B")
                 logger.warn(f"{action.round(4)}")  # just np
                 logger.warn(f"{clipped.to_vector().round(4)}")
 
@@ -725,7 +716,6 @@ class Base(gym.Env):
         logger.info(f"mode: {self.robot.mode} | state: {self.robot.state}")
 
     def stop(self, toggle=False):
-
         print(toggle, self.robot.mode)
 
         if toggle and self.robot.mode == 2:
@@ -771,4 +761,3 @@ class Base(gym.Env):
         # self.cameras.close()
         # self.boundary.close()
         # anything else?
-        pass

@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import glob
-from tqdm import tqdm
 import json
 import os
 import os.path as osp
@@ -10,6 +11,7 @@ import jax
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from tqdm import tqdm
 
 
 def display(image):
@@ -22,7 +24,6 @@ def filter_episodes(dataset, path, filtered):
     _f = {"yes": [], "no": []}
 
     for i, ep in enumerate(dataset):
-
         f = filtered.get(path, {})
         if i in f.get("yes", []) or i in f.get("no", []):
             continue  # already in yes
@@ -31,7 +32,6 @@ def filter_episodes(dataset, path, filtered):
             _f["no"].append(i)
 
         for j, step in enumerate(ep["steps"]):
-
             imgs = step["observation"]["img"]
             imgs = jax.tree.map(lambda x: np.array(x), imgs)
             imgs = np.concatenate(list(imgs.values()), axis=1)
@@ -60,15 +60,9 @@ def save_to_tfds(episodes, output_dir, name="filtered_dataset"):
             {
                 "img": tfds.features.FeaturesDict(
                     {
-                        "camera_0": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=tf.uint8
-                        ),
-                        "camera_1": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=tf.uint8
-                        ),
-                        "wrist": tfds.features.Tensor(
-                            shape=(640, 640, 3), dtype=tf.uint8
-                        ),
+                        "camera_0": tfds.features.Tensor(shape=(640, 640, 3), dtype=tf.uint8),
+                        "camera_1": tfds.features.Tensor(shape=(640, 640, 3), dtype=tf.uint8),
+                        "wrist": tfds.features.Tensor(shape=(640, 640, 3), dtype=tf.uint8),
                     }
                 ),
                 "robot": tfds.features.FeaturesDict(
@@ -106,7 +100,6 @@ def save_to_tfds(episodes, output_dir, name="filtered_dataset"):
 
 
 def main():
-
     data_dir = osp.expanduser("~/data")
     env_name = "xgym-lift-v0"
     inpath = osp.join(data_dir, f"{env_name}-*")

@@ -1,14 +1,14 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import time
-from rich.pretty import pprint
 
 import cv2
-import imageio
 import numpy as np
-import pyudev
+from rich.pretty import pprint
+import tyro
 
 from xgym.utils import camera as cu
-import tyro
-from dataclasses import dataclass
 
 """
 context = pyudev.Context()
@@ -36,14 +36,12 @@ print(df)
 """
 
 
-
 @dataclass
 class Config:
     cams: list[int] | None = None
 
 
 def main(cfg: Config):
-
     store = False
     cams = cu.list_cameras(cfg.cams)
 
@@ -60,12 +58,11 @@ def main(cfg: Config):
     print(cams)
     frames = []
     while True:
-
         tic = time.time()
 
         _ = [cam.grab() for cam in cams.values()]
         imgs = {k: cam.read() for k, cam in cams.items()}
-        imgs = { k: im for k, (ret, im) in imgs.items() if ret }
+        imgs = {k: im for k, (ret, im) in imgs.items() if ret}
         pprint({k: v.shape for k, v in imgs.items()})
         # imgs = {k: cu.square(f) for k, f in imgs.items()}
         imgs = cu.writekeys(imgs)
@@ -106,7 +103,7 @@ def main(cfg: Config):
 
 
 def realsense():
-    from gello.cameras.realsense_camera import RealSenseCamera, get_device_ids
+    from gello.cameras.realsense_camera import get_device_ids, RealSenseCamera
 
     device_ids = get_device_ids()
     rs = RealSenseCamera(flip=False, device_id=device_ids[0])

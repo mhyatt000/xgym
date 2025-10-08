@@ -1,22 +1,19 @@
-import enum
+from __future__ import annotations
+
 from dataclasses import dataclass
-from pprint import pprint
-from typing import Union
+import enum
 
 import cv2
-import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow_datasets as tfds
-import tyro
-from jax import numpy as jnp
 from tqdm import tqdm
+import tyro
 
 import xgym
-from xgym.rlds.util import add_col, remove_col
-from xgym.rlds.util.render import render_openpose
-from xgym.rlds.util.trajectory import binarize_gripper_actions, scan_noop
+from xgym.rlds.util import add_col
+from xgym.rlds.util.trajectory import scan_noop
 from xgym.viz.mano import overlay_palm, overlay_pose
 
 
@@ -34,7 +31,6 @@ class Embodiment(enum.Enum):
 
 @dataclass
 class BaseReaderConfig:
-
     version: str  # (e.g. "4.0.3")
     embodiment: Embodiment = Embodiment.SINGLE
     task: Task = Task.LIFT
@@ -61,11 +57,8 @@ def recolor(img):
 
 
 class Reader:
-
     def __init__(self, cfg: BaseReaderConfig):
         self.cfg = cfg
-
-    pass
 
     def imshow(self, images):
         if self.cfg.visualize:
@@ -79,12 +72,10 @@ class Reader:
 
 
 class RLDSReader(Reader):
-
     def __call__(self):
         pass
 
     def read(self, step):
-
         if self.cfg.embodiment == "single":
             self.print(step["action"])
             self.imshow(list(step["observation"]["image"].values()))
@@ -100,10 +91,7 @@ class RLDSReader(Reader):
             self.print(step["observation"]["keypoints_3d"])
             for j in range(0, self.cfg.horizon, self.cfg.resolution):
                 try:
-
-                    points2d = add_col(
-                        np.array(steps[i + j]["observation"]["keypoints_2d"])
-                    )
+                    points2d = add_col(np.array(steps[i + j]["observation"]["keypoints_2d"]))
                     palm = points2d[0]
 
                     # ifprint(img.mean(0).mean(0))
@@ -125,14 +113,13 @@ class RLDSReader(Reader):
 
 
 def summary():
-
-    fig, axs = plt.subplots(14, 1, figsize=(20, 40))
+    _fig, axs = plt.subplots(14, 1, figsize=(20, 40))
 
     ds = ds.take(100)
 
     reader = RLDSReader(cfg)
     for ep in tqdm(ds, total=len(ds)):
-        steps = [x for x in ep["steps"]]
+        steps = list(ep["steps"])
         # for i, s in tqdm(enumerate(steps), total=len(steps), leave=False):
 
         joints = [s["observation"]["proprio"]["joints"] for s in steps]
@@ -176,7 +163,7 @@ def summary():
 
 
 def main(cfg: BaseReaderConfig):
-    pprint(cfg)
+    # pprint(cfg)
 
     name = f"xgym_{cfg.task}_{cfg.embodiment}:{cfg.version}"
     xgym.logger.info(f"Loading {name} dataset")
@@ -188,6 +175,11 @@ def main(cfg: BaseReaderConfig):
     def ifprint(*args, **kwargs):
         if cfg.verbose:
             print(*args, **kwargs)
+
+    # print(len(ds))
+    # for ep in ds:
+    # steps = [x for x in ep["steps"]]
+    # for i, s in tqdm(enumerate(steps)):
 
     def ifshow(*args, **kwargs):
         if cfg.visualize:
@@ -255,7 +247,7 @@ def main(cfg: BaseReaderConfig):
 
     allnoops = 0
     for ep in tqdm(ds, total=len(ds)):
-        steps = [x for x in ep["steps"]]
+        steps = list(ep["steps"])
 
         """
         # need them in advance to binarize
@@ -270,7 +262,7 @@ def main(cfg: BaseReaderConfig):
 
         pos = pos[mask]
         actions = pos[1:] - pos[:-1]
-        actions[:,-1] = pos[:-1,-1] 
+        actions[:,-1] = pos[:-1,-1]
 
         ifprint(actions.round(2))
         allnoops += np.array(noops).sum()
@@ -280,7 +272,6 @@ def main(cfg: BaseReaderConfig):
         """
 
         for i, s in tqdm(enumerate(steps), total=len(steps), leave=False):
-
             # if cfg.verbose:
             # ifprint(s.keys())
 
@@ -298,19 +289,14 @@ def main(cfg: BaseReaderConfig):
                 ifprint(steps[i]["observation"]["keypoints_3d"])
                 for j in range(0, cfg.horizon, cfg.resolution):
                     try:
-
-                        points2d = add_col(
-                            np.array(steps[i + j]["observation"]["keypoints_2d"])
-                        )
+                        points2d = add_col(np.array(steps[i + j]["observation"]["keypoints_2d"]))
                         palm = points2d[0]
 
                         # ifprint(img.mean(0).mean(0))
 
                         if cfg.use_palm:
                             # z = np.array(steps[i + j]["observation"]["keypoints_3d"])[0][2]
-                            img = overlay_palm(
-                                img, int(palm[0]), int(palm[1]), opacity=j
-                            )
+                            img = overlay_palm(img, int(palm[0]), int(palm[1]), opacity=j)
                         else:
                             img = overlay_pose(img, points2d, opacity=j)
                         # ifprint(palm)

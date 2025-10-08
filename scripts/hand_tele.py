@@ -1,40 +1,26 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import os
 import os.path as osp
 import time
-from dataclasses import dataclass, field
 
 import cv2
 import draccus
-import envlogger
-import gymnasium as gym
-import jax
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from bsuite.utils.gym_wrapper import DMEnvFromGym, GymFromDMEnv
-from envlogger.backends.tfds_backend_writer import TFDSBackendWriter as TFDSWriter
-from envlogger.testing import catch_env
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from pynput import keyboard
 from tqdm import tqdm
 
 from xgym.controllers import (
     HamerController,
-    KeyboardController,
-    ModelController,
-    ScriptedController,
-    SpaceMouseController,
 )
-from xgym.gyms import Base, Lift, Stack
-from xgym.utils import boundary as bd
+from xgym.gyms import Lift
 from xgym.utils import camera as cu
-from xgym.utils.boundary import PartialRobotState as RS
 
 
 @dataclass
 class RunCFG:
-
     task: str = input("Task: ").lower()
     base_dir: str = osp.expanduser("~/data")
     time: str = time.strftime("%Y%m%d-%H%M%S")
@@ -63,7 +49,7 @@ def plot(actions):
     canvas = FigureCanvas(fig)
     canvas.draw()
     img = np.frombuffer(canvas.tostring_rgb(), dtype="uint8")
-    img = img.reshape(canvas.get_width_height()[::-1] + (3,))
+    img = img.reshape((*canvas.get_width_height()[::-1], 3))
     plt.close(fig)
 
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -73,7 +59,6 @@ def plot(actions):
 
 @draccus.wrap()
 def main(cfg: RunCFG):
-
     os.makedirs(cfg.data_dir, exist_ok=True)
 
     agent = HamerController("aisec-102.cs.luc.edu", 8001)
@@ -89,7 +74,6 @@ def main(cfg: RunCFG):
     hist = np.zeros(7)
 
     for ep in tqdm(range(100), desc="Episodes"):
-
         obs = env.reset()
         print(obs.keys())
 
@@ -106,7 +90,6 @@ def main(cfg: RunCFG):
         fingermax = 1e-8
 
         for _ in tqdm(range(int(cfg.nsteps) * freq), desc=f"EP{ep}"):  # 3 episodes
-
             tic = time.time()
             print("\n" * 3)
 
@@ -125,7 +108,6 @@ def main(cfg: RunCFG):
             print(hands.keys())
 
             if len(hands.keys()):
-
                 kp = hands["pred_keypoints_3d"]
                 kp = kp[0] if len(kp.shape) == 3 else kp
 

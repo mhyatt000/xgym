@@ -1,55 +1,80 @@
-from dataclasses import dataclass
-import os.path as osp
-import time
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 
 import draccus
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
+from rich.pretty import pprint
+import tyro
+from xgym.nodes.model import ModelClientConfig, NOMODEL
 
-from xgym.nodes import Camera, FootPedal, Gello, Governor, SpaceMouse, Writer, Xarm
+from xgym.nodes import Camera, FootPedal, Gello, Governor, Heleo, Model, SpaceMouse, Writer, Xarm
+from xgym.nodes.robot import ControlMode, InputMode, RobotConfig
 
-# import atexit
-# import signal
-# import cv2
-# from xgym.gyms import Base, Lift, Stack
-# from xgym.utils import boundary as bd
-# from xgym.utils import camera as cu
-# from xgym.utils.boundary import PartialRobotState as RS
-# from xgym.controllers import (KeyboardController, ScriptedController, SpaceMouseController)
+
+def default(x):
+    return field(default_factory=lambda: x)
 
 
 @dataclass
 class RunCFG:
-    # task: str = input("Task: ").lower()
     task: str = "demo"
-    base_dir: str = osp.expanduser("~/data")
-    time: str = time.strftime("%Y%m%d-%H%M%S")
-    env_name: str = f"xgym-sandbox-{task}-v0-{time}"
-    data_dir: str = osp.join(base_dir, env_name)
+    dir: str = "."  # data directory
+
     seconds: int = 15
     nepisodes: int = 100
-    gello: bool = False
+
+    input: InputMode = InputMode.GELLO
+    ctrl: ControlMode = ControlMode.JOINT
+
+    # TODO make a factory bc task
+    model: ModelClientConfig = default(NOMODEL)
+
+    @property
+    def robot(self):
+        return RobotConfig(input=self.input, ctrl=self.ctrl)
+
+        """
+        base_dir: str = osp.expanduser("~/data")
+        time: str = time.strftime("%Y%m%d-%H%M%S")
+        env_name: str = f"xgym-sandbox-{task}-v0-{time}"
+        data_dir: str = osp.join(base_dir, env_name)
+        """
 
 
 @draccus.wrap()
 def main(cfg: RunCFG):
     """Main training loop with environment interaction."""
 
+    pprint(cfg)
+
     # Start environment-related scripts
     rclpy.init()
 
     cameras = [
-        Camera(idx=2, name="worm"),
-        # Camera(idx=10, name="side"),
-        Camera(idx=0, name="over"),
-        Camera(idx=8, name="rs"),
+        Camera(idx=0, name="low"),
+        Camera(idx=10, name="side"),
+        # Camera(idx=3, name="high"),
+        Camera(idx=7, name="wrist"),
     ]
     cameras = {x.name: x for x in cameras}
+
+    match cfg.input:
+        case InputMode.GELLO:
+            ctrl = Gello()
+        case InputMode.SPACEMOUSE:
+            ctrl = SpaceMouse()
+        case InputMode.MODEL:
+            ctrl = Model(cfg.model)
+        case InputMode.HELEO:
+            ctrl = Heleo(cfg.model)
+
     nodes = {
-        "robot": Xarm(joint_ctrl=cfg.gello),
+        "robot": Xarm(cfg.robot),
         # 'viewer': FastImageViewer(active=False),
-        "controller": (SpaceMouse() if cfg.gello is False else Gello()),
-        "writer": Writer(seconds=cfg.seconds),  # writer spins after cameras init
+        "ctrl": ctrl,
+        "writer": Writer(seconds=cfg.seconds, dir=cfg.dir),  # writer spins after cameras init
         "pedal": FootPedal(),
         "gov": Governor(),
     }
@@ -82,4 +107,4 @@ def main(cfg: RunCFG):
 
 
 if __name__ == "__main__":
-    main()
+    main(tyro.cli(RunCFG))

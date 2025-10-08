@@ -104,6 +104,7 @@ ignore = [ # exceptions to select
     "ISC001", # Disabling to support ruff format.
     #
     "RUF009", # Do not perform function call in dataclass defaults
+    "T203", # We use print statements.
     # "RUF059", # Unpacked variable is never used
     "PIE796", # Enum contains duplicate value:
 ]

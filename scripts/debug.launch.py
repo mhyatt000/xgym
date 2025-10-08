@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 import os.path as osp
 import time
@@ -17,6 +19,7 @@ from xgym.nodes.xgello import GelloArgs, GelloNode
 # from xgym.utils import boundary as bd
 # from xgym.utils import camera as cu
 # from xgym.controllers import (KeyboardController, ScriptedController, SpaceMouseController)
+# from xgym.model_controllers import ModelController
 
 
 @dataclass
@@ -42,9 +45,7 @@ def main(cfg: RunCFG):
     nodes = {
         "robot": RobotNode(joint_ctrl=cfg.gello),
         # 'viewer': FastImageViewer(active=False),
-        "controller": (
-            SpaceMouseNode() if cfg.gello is False else GelloNode(GelloArgs())
-        ),
+        "controller": SpaceMouseNode() if cfg.gello is False else GelloNode(GelloArgs()),
         # "writer" : Writer(),
     }
 

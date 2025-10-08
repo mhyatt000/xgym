@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 import os.path as osp
+import subprocess
+import sys
 import time
 
-import cv2
 import draccus
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from xgym.controllers import (
-    SpaceMouseController,
-)
+from xgym.controllers import SpaceMouseController
 from xgym.gyms import Lift
 
 
@@ -30,69 +26,54 @@ class RunCFG:
     nepisodes: int = 100
 
 
-plt.switch_backend("Agg")
+def start_scripts(scripts):
+    processes = []
+    for script in scripts:
+        print(f"Starting {script}...")
+        p = subprocess.Popen([sys.executable, script])
+        processes.append(p)
+    return processes
 
 
-def plot(actions):
-    x, y, z, roll, pitch, yaw, gripper = actions.T
-    time = np.arange(len(x))
-
-    fig, ax = plt.subplots()
-    ax.plot(time, x, label="x")
-    ax.plot(time, y, label="y")
-    ax.plot(time, z, label="z")
-    ax.plot(time, roll, label="roll")
-    ax.plot(time, pitch, label="pitch")
-    ax.plot(time, yaw, label="yaw")
-    ax.plot(time, gripper, label="gripper")
-    ax.legend()
-
-    canvas = FigureCanvas(fig)
-    canvas.draw()
-    img = np.frombuffer(canvas.tostring_rgb(), dtype="uint8")
-    img = img.reshape((*canvas.get_width_height()[::-1], 3))
-    plt.close(fig)
-
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-    return img
+def cleanup(processes):
+    """
+    Terminates all subprocesses provided in the list.
+    """
+    print("Cleaning up child processes...")
+    for p in processes:
+        if p.poll() is None:  # Process is still running
+            p.terminate()
+    # Optionally, wait for processes to terminate cleanly
+    for p in processes:
+        try:
+            p.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print(f"Process {p.pid} did not exit in time; killing it.")
+            p.kill()
 
 
 @draccus.wrap()
 def main(cfg: RunCFG):
-    os.makedirs(cfg.data_dir, exist_ok=True)
-
+    # Define the scripts you want to run concurrently.
+    scripts_to_run = ["camera_node.py", "environment_node.py"]
+    recorder_script = ["recorder_node.py"]
     agent = SpaceMouseController()
-
-    # env = gym.make("xgym/stack-v0")
     env = Lift(out_dir=cfg.data_dir, random=True)
 
-    freq = 10  # hz
+    freq = 10  # Frequency in Hz
     dt = 1 / freq
 
-    hist = np.zeros(7)
-
+    processes = start_scripts(scripts_to_run)
     for ep in tqdm(range(cfg.nepisodes), desc="Episodes"):
+        print(f"\n=== Episode {ep + 1} starting ===")
+
+        recorder_processes = start_scripts(recorder_script)
         obs = env.reset()
         env.set_mode(7)
-        time.sleep(0.4)
         env.start_record()
 
-        # timestep = env.reset()
-        # obs = timestep.observation
-        for _ in tqdm(range(int(cfg.nsteps) * freq), desc=f"EP{ep}"):  # 3 episodes
-            tic = time.time()
-            print("\n" * 3)
-
-            # obs["img"] = jax.tree_map(
-            # lambda x: cv2.resize(np.array(x), (224, 224)), obs["img"]
-            # )
-
-            # print(obs["img"].keys())
-
-            # myimg = obs["img"]["camera_10"]
-            # primary = obs["img"]["camera_6"]
-
+        # Progress bar for steps within each episode
+        for step in tqdm(range(int(cfg.nsteps * freq)), desc=f"Episode {ep + 1} Steps", leave=False):
             np.set_printoptions(suppress=True)
 
             action = agent.read()
@@ -120,18 +101,18 @@ def main(cfg: RunCFG):
             print(f"done: {done}")
             if done:
                 break
-
-            # timestep = env.step(action)
-            # obs = timestep.observation
-
         env.stop_record()
-        env.flush()
+        # env.flush()
         # env.auto_reset()
 
-    env.reset()
-    env.close()
+        env.reset()
+        env.close()
 
-    quit()
+        cleanup(recorder_processes)
+        print(f"=== Episode {ep + 1} ended; processes terminated. Restarting for next episode. ===\n")
+
+        cleanup(processes)
+        quit()
 
 
 if __name__ == "__main__":
