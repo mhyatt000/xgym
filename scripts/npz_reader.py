@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 import os
 from pathlib import Path
@@ -46,15 +48,9 @@ def main(cfg: RunCFG):
     for i in tqdm(range(num_frames)):
         # Build current frame dict from all entries
         step = {
-            k: v[i]
-            for k, v in ep.items()
-            if isinstance(v, np.ndarray) and v.ndim == 4 and v.shape[0] == num_frames
+            k: v[i] for k, v in ep.items() if isinstance(v, np.ndarray) and v.ndim == 4 and v.shape[0] == num_frames
         }
-        imgs = {
-            k: v
-            for k, v in step.items()
-            if isinstance(v, np.ndarray) and v.ndim == 3 and v.shape[-1] == 3
-        }
+        imgs = {k: v for k, v in step.items() if isinstance(v, np.ndarray) and v.ndim == 3 and v.shape[-1] == 3}
 
         imgs = np.concatenate(list(imgs.values()), axis=0)
 
@@ -96,9 +92,7 @@ def main(cfg: RunCFG):
         im.set_data(first_camera_frames[frame])
         return [im]
 
-    ani = animation.FuncAnimation(
-        fig, update, frames=range(first_camera_frames.shape[0]), interval=50, blit=True
-    )
+    ani = animation.FuncAnimation(fig, update, frames=range(first_camera_frames.shape[0]), interval=50, blit=True)
     print("Showing animation")
     plt.show()
 
