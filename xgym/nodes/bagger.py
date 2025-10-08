@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import rosbag
 import rospy
 from std_msgs.msg import String

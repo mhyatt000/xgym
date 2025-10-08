@@ -73,7 +73,7 @@ class CameraConfig:
 def main(cfg: CameraConfig):
     args = None
     rclpy.init(args=args)
-    node = CameraNode(name=cfg.name, idx=cfg.idx)
+    node = Camera(name=cfg.name, idx=cfg.idx)
 
     try:
         rclpy.spin(node)
