@@ -1,5 +1,5 @@
 import time
-from pprint import pprint
+from rich.pretty import pprint
 
 import cv2
 import imageio
@@ -7,7 +7,10 @@ import numpy as np
 import pyudev
 
 from xgym.utils import camera as cu
+import tyro
+from dataclasses import dataclass
 
+"""
 context = pyudev.Context()
 
 import pandas as pd
@@ -30,12 +33,19 @@ df = df.sort_values(
 )
 
 print(df)
+"""
 
 
-def main():
+
+@dataclass
+class Config:
+    cams: list[int] | None = None
+
+
+def main(cfg: Config):
 
     store = False
-    cams = cu.list_cameras()
+    cams = cu.list_cameras(cfg.cams)
 
     print(cams)
 
@@ -54,17 +64,15 @@ def main():
         tic = time.time()
 
         _ = [cam.grab() for cam in cams.values()]
-        imgs = {
-            k: im
-            for k, (ret, im) in {k: cam.retrieve() for k, cam in cams.items()}.items()
-        }
+        imgs = {k: cam.read() for k, cam in cams.items()}
+        imgs = { k: im for k, (ret, im) in imgs.items() if ret }
         pprint({k: v.shape for k, v in imgs.items()})
-        imgs = {k: cu.square(f) for k, f in imgs.items()}
+        # imgs = {k: cu.square(f) for k, f in imgs.items()}
         imgs = cu.writekeys(imgs)
 
         # resize by the biggest dimension of frames
-        imgs = cu.resize_all(list(imgs.values()), m=640)
-        frame = np.concatenate(imgs, axis=1)
+        imgs = cu.resize_all(list(imgs.values()), m=480)
+        frame = np.concatenate(imgs, axis=0)
 
         if store:
             frames.append(frame)
@@ -115,4 +123,4 @@ def realsense():
 
 if __name__ == "__main__":
     # realsense()
-    main()
+    main(tyro.cli(Config))

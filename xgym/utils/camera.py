@@ -5,6 +5,9 @@ import cv2
 import imageio
 import numpy as np
 
+from logging import getLogger
+
+log = getLogger(__name__)
 
 def square(img: np.array):
     """returns a square center crop based on the smaller side"""
@@ -19,10 +22,15 @@ def resize_all(imgs: List[np.array], m=None):
     return [cv2.resize(f, (m, m)) for f in imgs]
 
 
-def list_cameras():
+def list_cameras(idxs: list | None  =None):
 
     cams = {}
     videos = [x for x in os.listdir("/dev/") if "video" in x]
+    log.info(f"Found cameras: {videos}")
+    if idxs:
+        videos = [x for x in videos if any(str(i) in x for i in idxs)]
+    log.info(f"Using cameras: {videos}")
+
 
     for i in range(len(videos) + 4):
         cap = cv2.VideoCapture(i)
