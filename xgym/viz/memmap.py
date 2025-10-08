@@ -1,8 +1,8 @@
 """reads memmaps of a schema"""
 
+from __future__ import annotations
+
 import json
-import os
-import time
 from pathlib import Path
 
 import cv2
@@ -10,8 +10,6 @@ import cv2
 # import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
-
-import xgym.utils.camera as cu
 
 
 def fold_angle(theta: np.ndarray) -> np.ndarray:
@@ -26,7 +24,7 @@ def read_all(root=Path().cwd(), show=False):
     paths = list(root.rglob("*.dat"))
     print(paths)
     for p in paths:
-        info, data = read(p)
+        _info, data = read(p)
         if show:
             view(data)
 
@@ -35,7 +33,7 @@ def read_filtered(path, dtype, n):
     # doesnt need specified length, just dtype
     data = np.memmap(path, dtype=dtype, mode="r", shape=n)
 
-    data = [d for d in data]
+    data = list(data)
     # filter rows where any nan element
     # data = [d for d in data if not any([np.any(np.array(x).isnan()) for x in d])]
     # filter rows where all zeros
@@ -44,7 +42,6 @@ def read_filtered(path, dtype, n):
 
 
 def read(path):
-
     ###
     ### read info / schema
     ###
@@ -56,10 +53,7 @@ def read(path):
     schema = {"time": 1} | schema
     dtype = np.dtype(
         # [("time", np.float32)] +  # time is in schema now
-        [
-            (k, np.float32 if isinstance(v, int) else np.uint8, v)
-            for k, v in schema.items()
-        ]
+        [(k, np.float32 if isinstance(v, int) else np.uint8, v) for k, v in schema.items()]
     )
 
     # TODO add time to the writer schema
@@ -95,7 +89,7 @@ def view(data):
     print("viewing")
     n = len(data["time"])
     for i in tqdm(range(n)):
-        keys = [k for k in data.keys() if "cam" in k]
+        keys = [k for k in data if "cam" in k]
         frames = [data[k][i] for k in keys]
         frame = np.concatenate([cv2.resize(f, (480, 480)) for f in frames], axis=1)
 
@@ -159,4 +153,3 @@ def view(data):
     # plt.clf()
     # plt.close("all")
     # icv2.destroyWindow()
-    print("CLOSED")

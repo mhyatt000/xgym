@@ -1,24 +1,19 @@
+from __future__ import annotations
+
 from functools import partial
 
 import cv2
+from cv_bridge import CvBridge
 import numpy as np
 import rclpy
-from cv_bridge import CvBridge
 from rclpy.node import Node
-from rclpy.qos import (
-    QoSDurabilityPolicy,
-    QoSProfile,
-    QoSReliabilityPolicy,
-    ReliabilityPolicy,
-)
-from sensor_msgs.msg import CompressedImage, Image, JointState
-from std_msgs.msg import Bool, Float32MultiArray, String
-from xarm_msgs.msg import CIOState, RobotMsg
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import CompressedImage
 
 from .base import Base
 
 
-class FastImageViewer(Base):
+class _FastImageViewer(Base):
     def __init__(self):
         print("init")
         super().__init__("fast_image_viewer")
@@ -31,7 +26,6 @@ class FastImageViewer(Base):
         print(self.subs)
 
     def show(self):
-
         # rgb to bgr for viewing
         print(self.data.keys())
 
@@ -75,13 +69,10 @@ class FastImageViewer(Node):
         self.qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
 
         self.cams = self.list_camera_topics()
-        self.data = {k: None for k in self.cams}
+        self.data = dict.fromkeys(self.cams)
 
         self.subs = {
-            k: self.create_subscription(
-                CompressedImage, k, partial(self.set_image, key=k), self.qos
-            )
-            for k in self.cams
+            k: self.create_subscription(CompressedImage, k, partial(self.set_image, key=k), self.qos) for k in self.cams
         }
 
         self.bridge = CvBridge()
@@ -127,14 +118,12 @@ class FastImageViewer(Node):
 
         return
 
-        if all([v is None for v in self.data.values()]):
+        if all(v is None for v in self.data.values()):
             print(self.data)
             return
         else:
             print("showing")
-            print(
-                {k: (v.shape, v.dtype) for k, v in self.data.items() if v is not None}
-            )
+            print({k: (v.shape, v.dtype) for k, v in self.data.items() if v is not None})
             return
 
         """
@@ -145,9 +134,7 @@ class FastImageViewer(Node):
                 self.data[k] = cv2.cvtColor(v, cv2.COLOR_RGB2BGR)
         """
 
-        frame = np.concatenate(
-            [v for k, v in self.data.items() if v is not None], axis=1
-        )
+        frame = np.concatenate([v for k, v in self.data.items() if v is not None], axis=1)
 
         cv2.imshow("Camera", frame)
         cv2.waitKey(1)

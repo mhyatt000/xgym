@@ -1,23 +1,16 @@
-import datetime
+from __future__ import annotations
+
+from dataclasses import dataclass
 import glob
 import time
-from dataclasses import dataclass
-from functools import partial
-from pathlib import Path
-from typing import Optional, Tuple
 
 import draccus
-import numpy as np
-import rclpy
-from control_msgs.msg import JointJog
-from cv_bridge import CvBridge
 from gello.agents.gello_agent import GelloAgent
 from gello.env import RobotEnv
 from gello.zmq_core.robot_node import ZMQClientRobot
-from geometry_msgs.msg import TwistStamped
-from rclpy.node import Node
-from std_msgs.msg import Bool, Float32MultiArray
-from xarm_msgs.srv import GetFloat32, GripperMove
+import numpy as np
+import rclpy
+from std_msgs.msg import Float32MultiArray
 
 from xgym.nodes.base import Base
 
@@ -43,9 +36,9 @@ class GelloArgs:
     hostname: str = "127.0.0.1"
     robot_type: str = None  # only needed for quest agent or spacemouse agent
     hz: int = 100
-    start_joints: Optional[Tuple[float, ...]] = None
+    start_joints: tuple[float, ...] | None = None
 
-    gello_port: Optional[str] = None
+    gello_port: str | None = None
     mock: bool = False
     use_save_interface: bool = False
     data_dir: str = "~/bc_data"
@@ -55,7 +48,6 @@ class GelloArgs:
 
 
 class Gello(Base):
-
     def __init__(self, args: GelloArgs = GelloArgs(), env=None):
         super().__init__("gello")
         logger = self.get_logger()
@@ -80,7 +72,7 @@ class Gello(Base):
 
         logger.info("Gello Agent Created.")
 
-        self.hz = 200
+        self.hz = 50
         self.loghz = 5
         self.pub = self.create_publisher(Float32MultiArray, "/gello/state", 10)
         self.timer = self.create_timer(1 / self.hz, self.run)
@@ -122,7 +114,6 @@ class Gello(Base):
         self.set_period()
 
     def run(self):
-
         # raw = self._driver.get_joints()
         action = self.agent.act()
 
@@ -140,13 +131,8 @@ class Gello(Base):
 
 
 def build_env(args):
-
-    if args.start_joints is None:
-        reset_joints = np.deg2rad(
-            [0, -90, 90, -90, -90, 0, 0]
-        )  # Change this to your own reset joints
-    else:
-        reset_joints = args.start_joints
+    # Change this to your own reset joints
+    reset_joints = np.deg2rad([0, -90, 90, -90, -90, 0, 0]) if args.start_joints is None else args.start_joints
 
     camera_clients = {
         # you can optionally add camera nodes here for imitation learning purposes
@@ -174,7 +160,6 @@ def build_env(args):
 
 
 def startup(agent, env, args):
-
     robo = agent._robot
     raw = robo._driver.get_joints()
     # pprint({"raw": raw})
@@ -204,14 +189,10 @@ def startup(agent, env, args):
             start_pos[id_mask],
             joints[id_mask],
         ):
-            print(
-                f"joint[{i}]: \t delta: {delta:4.3f} , leader: \t{joint:4.3f} , follower: \t{current_j:4.3f}"
-            )
+            print(f"joint[{i}]: \t delta: {delta:4.3f} , leader: \t{joint:4.3f} , follower: \t{current_j:4.3f}")
 
     print(f"Start pos: {len(start_pos)}", f"Joints: {len(joints)}")
-    assert len(start_pos) == len(
-        joints
-    ), f"agent output dim = {len(start_pos)}, but env dim = {len(joints)}"
+    assert len(start_pos) == len(joints), f"agent output dim = {len(start_pos)}, but env dim = {len(joints)}"
 
     max_delta = 0.05
     for _ in range(25):
@@ -233,9 +214,7 @@ def startup(agent, env, args):
         # print which joints are too big
         joint_index = np.where(action - joints > 0.8)
         for j in joint_index:
-            print(
-                f"Joint [{j}], leader: {action[j]}, follower: {joints[j]}, diff: {action[j] - joints[j]}"
-            )
+            print(f"Joint [{j}], leader: {action[j]}, follower: {joints[j]}, diff: {action[j] - joints[j]}")
             print(f"leader: {action}")
             print(f"follower: {joints}")
         if args.safety:
@@ -244,7 +223,6 @@ def startup(agent, env, args):
 
 @draccus.wrap()
 def main(args: GelloArgs):
-
     rclpy.init(args=None)
 
     # env = build_env(args)

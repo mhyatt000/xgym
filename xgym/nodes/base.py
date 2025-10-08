@@ -1,28 +1,17 @@
-import json
-import os
-import threading
-import time
-
-import numpy as np
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import (
-    QoSDurabilityPolicy,
-    QoSProfile,
-    QoSReliabilityPolicy,
-    ReliabilityPolicy,
-)
-from sensor_msgs.msg import CompressedImage, Image, JointState
-from std_msgs.msg import Bool, Float32MultiArray, String
-from xarm_msgs.msg import CIOState, RobotMsg
-
+from __future__ import annotations
 
 from functools import partial
+import time
+
 from cv_bridge import CvBridge
+import numpy as np
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Bool
 
 
 class Base(Node):
-
     def __init__(self, node_name):
         super().__init__(node_name)
         self.get_logger().info("initializing...")
@@ -32,26 +21,21 @@ class Base(Node):
         self.active = False
 
         self.active_pub = self.create_publisher(Bool, "/xgym/active", 10)
-        self.active_sub = self.create_subscription(
-            Bool, "/xgym/active", self.set_active, 10
-        )
+        self.active_sub = self.create_subscription(Bool, "/xgym/active", self.set_active, 10)
 
     def list_camera_topics(self):
         topics = self.get_topic_names_and_types()
         cams = [t for t, types in topics if "camera" in t]
         return cams
 
-    def build_cam_subs(self):
-        self.camqos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+    def build_cam_subs(self, cams=None):
         self.cams = self.list_camera_topics()
-        print(self.cams)
-        self.data = self.data | {k: np.zeros((224, 224, 3)) for k in self.cams}
+        cams = cams if cams is not None else self.cams
+        self.camqos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+        self.data = self.data | {k: np.zeros((224, 224, 3)) for k in cams}
 
         self.subs = {
-            k: self.create_subscription(
-                CompressedImage, k, partial(self.set_image, key=k), self.camqos
-            )
-            for k in self.cams
+            k: self.create_subscription(CompressedImage, k, partial(self.set_image, key=k), self.camqos) for k in cams
         }
 
         # ats = ApproximateTimeSynchronizer(
@@ -60,7 +44,8 @@ class Base(Node):
         # ats.registerCallback(self.sync_callback)
 
         self.bridge = CvBridge()
-        self.get_logger().info("Initialized Camera Subs.")
+        self.get_logger().info("Initialized Camera Subs:")
+        self.get_logger().info(f"{list(self.subs.keys())}")
 
     def set_active(self, msg: Bool):
         self.active = msg.data
@@ -68,7 +53,6 @@ class Base(Node):
         # self.logp(f"setting active {self.active}")
 
     def set_image(self, msg, key):
-
         # if self.p % self.hz == 0:
         # self.get_logger().info(f"Received image from {key}")
 

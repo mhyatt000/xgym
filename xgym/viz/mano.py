@@ -1,10 +1,7 @@
-from dataclasses import dataclass
-from pprint import pprint
-from typing import Union
+from __future__ import annotations
 
 import cv2
-import numpy as np
-from xgym.rlds.util import add_col, remove_col
+
 from xgym.rlds.util.render import render_openpose
 
 

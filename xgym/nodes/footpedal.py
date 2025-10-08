@@ -1,10 +1,11 @@
-import threading
-import numpy as np
+from __future__ import annotations
 
+import threading
+
+from evdev import ecodes, InputDevice
+import numpy as np
 import rclpy
-from evdev import InputDevice, ecodes
-from rclpy.node import Node
-from std_msgs.msg import Bool, Int32MultiArray
+from std_msgs.msg import Int32MultiArray
 
 from xgym.nodes.base import Base
 
@@ -36,18 +37,16 @@ class FootPedal(Base):
         """
 
         for event in self.device.read_loop():
-            if event.type == ecodes.EV_KEY:
-                if event.code in self.pmap:
+            if event.type == ecodes.EV_KEY and event.code in self.pmap:
+                p = self.pmap[event.code]
+                new = event.value  # 0=release, 1=press, 2=hold/repeat
 
-                    p = self.pmap[event.code]
-                    new = event.value  # 0=release, 1=press, 2=hold/repeat
-
-                    if changed := (self.value[p] != new):
-                        self.value[p] = new
-                        msg = Int32MultiArray(data=self.value)
-                        self.pub.publish(msg)
-                        self.get_logger().info(f"{np.array(msg.data)}")
-                        self.get_logger().info(f"Pedal {p} -> {self.describe(new)}")
+                if changed := (self.value[p] != new):
+                    self.value[p] = new
+                    msg = Int32MultiArray(data=self.value)
+                    self.pub.publish(msg)
+                    self.get_logger().info(f"{np.array(msg.data)}")
+                    self.get_logger().info(f"Pedal {p} -> {self.describe(new)}")
 
     def describe(self, val):
         return {0: "released", 1: "pressed", 2: "held"}.get(val, f"unknown({val})")

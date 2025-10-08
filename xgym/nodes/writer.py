@@ -1,37 +1,29 @@
+from __future__ import annotations
+
 import json
 import os
-import threading
-import time
 from pathlib import Path
+import time
 
 import numpy as np
 import rclpy
-from cv_bridge import CvBridge
-from rclpy.node import Node
-from rclpy.qos import (
-    QoSDurabilityPolicy,
-    QoSProfile,
-    QoSReliabilityPolicy,
-    ReliabilityPolicy,
-)
-from sensor_msgs.msg import CompressedImage, Image, JointState
-from std_msgs.msg import Bool, Float32MultiArray, String
-from xarm_msgs.msg import CIOState, RobotMsg
+from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool, Float32MultiArray
+from xarm_msgs.msg import RobotMsg
 
+import xgym
 
 from .base import Base
 
 
-import xgym
-
-
 class Writer(Base):
-
-    def __init__(self, seconds=15):
+    def __init__(self, seconds=15, dir="."):
         super().__init__("writer")
 
         self.t0 = time.time()
         self.recording = True  #  Flag to control recording
+        self.dir = dir
 
         self.schema = {
             "xarm_joints": 7,
@@ -39,7 +31,7 @@ class Writer(Base):
             "xarm_gripper": 1,
             "gello_joints": 8,  # pad spacemouse 7->8 if used
         }
-        self.data = {k: None for k in self.schema.keys()}
+        self.data = dict.fromkeys(self.schema.keys())
 
         self.cwd = os.getcwd()
         self.hz = 50
@@ -53,8 +45,10 @@ class Writer(Base):
 
         self.set_period()
         self.build_cam_subs()
-        imshape = (224, 224, 3)
-        self.schema = self.schema | {k: imshape for k in self.cams}
+
+        px = 224
+        imshape = (px, px, 3)
+        self.schema = self.schema | dict.fromkeys(self.cams, imshape)
 
         # old subscriber overwrote the moveit topic
         # self.create_subscription(
@@ -65,24 +59,14 @@ class Writer(Base):
         # Float32MultiArray, "/robot_commands", self.set_cmd, qos_profile
         # )
 
-        self.gello_sub = self.create_subscription(
-            Float32MultiArray, "/gello/state", self.set_gello, 10
-        )
+        self.gello_sub = self.create_subscription(Float32MultiArray, "/gello/state", self.set_gello, 10)
 
-        self.moveit_sub = self.create_subscription(
-            JointState, "/xarm/joint_states", self.set_joints, 10
-        )
-        self.moveit_pose_sub = self.create_subscription(
-            RobotMsg, "/xarm/robot_states", self.set_pose, 10
-        )
-        self.gripper_sub = self.create_subscription(
-            Float32MultiArray, "/xgym/gripper", self.set_gripper, 10
-        )
+        self.moveit_sub = self.create_subscription(JointState, "/xarm/joint_states", self.set_joints, 10)
+        self.moveit_pose_sub = self.create_subscription(RobotMsg, "/xarm/robot_states", self.set_pose, 10)
+        self.gripper_sub = self.create_subscription(Float32MultiArray, "/xgym/gripper", self.set_gripper, 10)
 
         self.subs = {
-            "replay": self.create_subscription(
-                Bool, "/xgym/gov/writer/replay", self.on_replay, 10
-            ),
+            "replay": self.create_subscription(Bool, "/xgym/gov/writer/replay", self.on_replay, 10),
         }
 
         self.timer = self.create_timer(1 / self.hz, self.write)
@@ -117,18 +101,14 @@ class Writer(Base):
         super().set_active(msg)
 
     def build_memap(self):
-
         # images are uint8
         dtype = np.dtype(
             [("time", np.float32)]
-            + [
-                (k, np.float32 if isinstance(v, int) else np.uint8, v)
-                for k, v in self.schema.items()
-            ]
+            + [(k, np.float32 if isinstance(v, int) else np.uint8, v) for k, v in self.schema.items()]
         )
 
         dt = time.strftime("%Y%m%d-%H%M%S")
-        self.path = Path().cwd() / f"xgym_data_{dt}.dat"
+        self.path = Path(self.dir) / f"xgym_data_{dt}.dat"
 
         # dump schema and info to json
         with open(str(self.path).replace(".dat", ".json"), "w") as f:
@@ -148,7 +128,6 @@ class Writer(Base):
         self.get_logger().info(f"Created memap at {self.path}")
 
     def write(self):
-
         logger = self.get_logger()
         if not self.active:
             # logger.info("Inactive")
@@ -219,7 +198,7 @@ class Writer(Base):
         if not msg.data:
             return
 
-        info, data = xgym.viz.memmap.read(self.path)
+        _info, data = xgym.viz.memmap.read(self.path)
         xgym.viz.memmap.view(data)
 
 

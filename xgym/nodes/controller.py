@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import rclpy
-from rclpy.node import Node
+from rich.pretty import pprint
 from std_msgs.msg import Float32MultiArray
+
 from xgym.controllers import SpaceMouseController
 
+from .base import Base
 
-class SpaceMouse(Node):
+
+class SpaceMouse(Base):
     """
     Reads input from the SpaceMouse and publishes to /robot_commands.
     """
@@ -15,7 +20,7 @@ class SpaceMouse(Node):
         self.publisher = self.create_publisher(Float32MultiArray, "/robot_commands", 10)
         self.controller = SpaceMouseController()
 
-        self.hz = 300
+        self.hz = 200
         self.timer = self.create_timer(1 / self.hz, self.publish_command)
 
         self.get_logger().info("Controller Node Initialized.")
@@ -24,6 +29,7 @@ class SpaceMouse(Node):
         """Reads SpaceMouse input and publishes it."""
 
         action = self.controller.read()
+        pprint(action)
         msg = Float32MultiArray()
         msg.data = action.tolist()
         self.publisher.publish(msg)
@@ -32,7 +38,7 @@ class SpaceMouse(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = SpaceMouseNode()
+    node = SpaceMouse()
 
     try:
         rclpy.spin(node)

@@ -1,20 +1,17 @@
-import math
-import os
-import threading
-import time
-from functools import partial
+from __future__ import annotations
 
+from dataclasses import dataclass, field
+from enum import Enum
+import time
+
+from control_msgs.msg import JointJog
+from geometry_msgs.msg import TwistStamped
 import numpy as np
 import rclpy
-from control_msgs.msg import JointJog
-from cv_bridge import CvBridge
-from geometry_msgs.msg import TwistStamped
-from rclpy.node import Node
-from sensor_msgs.msg import Image, JointState
-from std_msgs.msg import Bool, Float32MultiArray
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float32MultiArray
 from xarm.wrapper import XArmAPI
-from xarm_msgs.srv import GetFloat32, GripperMove
-
+from xarm_msgs.msg import RobotMsg
 
 from .base import Base
 
@@ -82,44 +79,92 @@ class Accelerator:
         }
 
 
+class InputMode(str, Enum):
+    SPACEMOUSE = "spacemouse"
+    KEYBOARD = "keyboard"
+    GELLO = "gello"
+    MODEL = "model"
+    HELEO = "heleo"
+
+
+class ControlMode(Enum):
+    JOINT = "joint"
+    CARTESIAN = "cartesian"
+
+
+@dataclass
+class AccelConfigFactory:
+    """Factory for creating AccelConfig"""
+
+    A_max: float = 30.0  # max acceleration
+
+    # proportional gain. controls the stiffness of the system.
+    # -- determines how strongly the system responds to the position error.
+    # -- A higher `Kp` value means the system will respond more aggressively to position errors, making it stiffer.
+    Kp: float = 800.0
+
+    # derivative gain. controls the damping of the system.
+    # -- determines how strongly the system responds to change in position error
+    # -- A higher `Kd` value means the system will become less oscillatory / more stable.
+    Kd: float = 40.0
+
+    def create(self, hz: float) -> Accelerator:
+        dt: float = 1 / self.hz
+        return Accelerator(dt=dt, A_max=self.A_max, Kp=self.Kp, Kd=self.Kd)
+
+
+@dataclass
+class RobotConfig:
+    ip: str = "192.168.1.231"  # robot details
+    dof: int = 7
+
+    input: InputMode = InputMode.GELLO
+    ctrl: ControlMode = ControlMode.JOINT  # controller details
+
+    hz: int = 200  # command frequency
+    grip_hz: int = 50  # gripper frequency
+    acc: AccelConfigFactory = field(default_factory=AccelConfigFactory)
+
+    def __post_init__(self):
+        if self.input == InputMode.SPACEMOUSE:
+            msg = "spacemouse only works with cartesian control"
+            assert self.ctrl == ControlMode.CARTESIAN, msg
+        if self.input == InputMode.GELLO:
+            msg = "gello only works with joint control"
+            assert self.ctrl == ControlMode.JOINT, msg
+
+        # TODO is this a bad idea
+        # self.acc = self.acc.create(self.hz)
+
+
+@dataclass
+class RobotState:
+    angle: list[float]
+    pose: list[float]
+
+
+deg2rad = lambda x: x * np.pi / 180
+HOME = RobotState(
+    angle=[deg2rad(x) for x in [0, -45, 0, 35, 0, 65, 90]],
+    # # angle=[-0.01057, 0.03834, -0.09203, 1.52784, 0.06442, 1.42840, -0.20091],
+    pose=[502.73455, -34.92372, 343.89443, -3.09418, -0.07189, 0.08958],
+)
+
+
 class Xarm(Base):
     """Publishes xArm state and camera images."""
 
-    def __init__(self, ip="192.168.1.231", joint_ctrl=False):
+    def __init__(self, cfg: RobotConfig):
         super().__init__("xarm_robot")
 
-        # Retrieve `data_dir` from ROS parameters (passed from ros_sandbox.py)
-        # self.declare_parameter("data_dir", "~/data")  # Default if not set
-        # self.data_dir = (
-        # self.get_parameter("data_dir").get_parameter_value().string_value
-        # )
-        # self.get_logger().info(f"Using data directory: {self.data_dir}")
-
-        self.ip = ip
-        self.joint_ctrl = joint_ctrl
+        self.cfg = cfg
+        self.ip = cfg.ip
+        self.joint_ctrl = cfg.ctrl == ControlMode.JOINT
         self.dof = 7
         self.t0 = time.time()
         self.tic = time.time()
 
-        self._home = {
-            "angle": [
-                -0.010571539402008057,
-                0.03834952041506767,
-                -0.09203694015741348,
-                1.5278464555740356,
-                0.06442747265100479,
-                1.428409457206726,
-                -0.20091573894023895,
-            ],
-            "pose": [
-                502.73455810546875,
-                -34.92372131347656,
-                343.8944396972656,
-                -3.094181776046753,
-                -0.07189014554023743,
-                0.08958626538515091,
-            ],
-        }
+        self.home = HOME
 
         self.robot = XArmAPI(self.ip, is_radian=True)
         self.get_logger().info("Initializing robot.")
@@ -135,6 +180,7 @@ class Xarm(Base):
         # self.robot.set_state(0)
         self.robot.set_gripper_enable(True)
         self.robot.set_gripper_mode(0)
+        # self.robot.set_gripper_speed(5000)
         self.robot.set_gripper_speed(5000)
 
         self.get_logger().info("Robot initialized.")
@@ -149,13 +195,23 @@ class Xarm(Base):
         self.leader = None
         self.grip = None
         self.displace = None
+
         self.acc = Accelerator(
             dt=1 / self.hz,
             A_max=30.0,
             Kp=800.0,
             Kd=40.0,
         )
-        self.vmax = 0
+
+        match cfg.input:
+            case InputMode.GELLO | InputMode.SPACEMOUSE:
+                self.ema = 5 / self.hz
+                self.gema = 1.0  # gripper ema
+            case InputMode.MODEL | InputMode.HELEO:
+                self.ema = 0.9
+                self.ema = 8 / self.hz
+                self.gema = self.ema
+                # self.gema = 0.01
 
         #
         # ROS things
@@ -164,28 +220,22 @@ class Xarm(Base):
         # self.pub = self.create_publisher(Float32MultiArray, "/robot_state", 10)
         # self.state_timer = self.create_timer(1 / self.hz, self.publish_xarm_state)
 
-        self.cmd_sub = self.create_subscription(
-            Float32MultiArray, "/robot_commands", self.set_act, 10
-        )
-        self.gello_sub = self.create_subscription(
-            Float32MultiArray, "/gello/state", self.set_gello, 10
-        )
-        self.moveit_sub = self.create_subscription(
-            JointState, "/xarm/joint_states", self.set_joints, 10
-        )
+        self.cmd_sub = self.create_subscription(Float32MultiArray, "/robot_commands", self.set_act, 10)
+        self.gello_sub = self.create_subscription(Float32MultiArray, "/gello/state", self.set_gello, 10)
+        self.moveit_sub = self.create_subscription(JointState, "/xarm/joint_states", self.set_joints, 10)
+        self.moveit_pose_sub = self.create_subscription(RobotMsg, "/xarm/robot_states", self.set_pose, 10)
 
         # self.act_timer = self.create_timer(1 / self.hz, self.servo)
 
         self.get_logger().info("Robot Node Initialized.")
 
-        self.twist_pub = self.create_publisher(
-            TwistStamped, "/servo_server/delta_twist_cmds", 10
-        )
-        self.jog_pub = self.create_publisher(
-            JointJog, "/servo_server/delta_joint_cmds", 10
-        )
+        self.twist_pub = self.create_publisher(TwistStamped, "/servo_server/delta_twist_cmds", 10)
+        self.jog_pub = self.create_publisher(JointJog, "/servo_server/delta_joint_cmds", 10)
         self.get_logger().info("Keyboard servo publisher started.")
 
+        # self._stop_event = threading.Event()
+        # self._thread = threading.Thread(target=self._command_loop, daemon=True)
+        # self._thread.start()
         self.timer = self.create_timer(1 / self.hz, self.run)
 
         #
@@ -201,25 +251,33 @@ class Xarm(Base):
         # Create a timer to call the service at 50Hz (0.02 sec period).
 
         self.gripper_pub = self.create_publisher(Float32MultiArray, "/xgym/gripper", 10)
-        self.timer = self.create_timer(1 / self.griphz, self.gripper_callback)
+        self.gtimer = self.create_timer(1 / self.griphz, self.gripper_callback)
 
-    @property
-    def home(self):
-        _home = self._home
-        # noise = np.random.normal(0, 0.01, size=len(_home["angle"]))
-        # this is new noise every time ...needs to be fixed
-        # _home["angle"] = np.array(_home["angle"]) # +noise
-        return self._home
+    def _command_loop(self):
+        rate = 1.0 / self.hz
+        while not self._stop_event.is_set():
+            tic = time.time()
+            # self.step()
+            self.run()
+            toc = time.time()
+            time.sleep(max(0, rate - (toc - tic)))
+
+    def destroy_node(self):
+        self._stop_event.set()
+        self._thread.join()
+        super().destroy_node()
 
     def set_active(self, msg):
         super().set_active(msg)
 
-        noise = np.random.normal(0, 0.01, size=len(self._home["angle"]))
-        self._home["angle"] = np.array(self._home["angle"])  # +noise
+        self.leader = None
+        self._clear_error_states()
+        self.grip = 1
+        noise = np.random.normal(0, 0.01, size=len(self.home.angle))
+        self.home.angle = np.array(self.home.angle)  # +noise
         self.acc.velocity = np.zeros_like(self.acc.velocity)
 
     def gripper_callback(self):
-
         # self._clear_error_states()
         if not self.active:
             # self.get_logger().info("Inactive.")
@@ -230,60 +288,46 @@ class Xarm(Base):
         logger = self.get_logger()
 
         if code or (grip is None):
-            pass
-        else:
-            self.grip = grip
-            self.gripper_pub.publish(Float32MultiArray(data=[grip]))
-
-        clip = lambda a, b: lambda x: max(min(b, x), a)
-        if self.joint_ctrl:
-            if self.leader is None:
-                return
-            new = self.leader[-1] * 850
-        else:
-            new = self.grip + self.act[-1]
-        new = clip(0.0, 850)(new)
-
-        self.robot.set_gripper_position(new, wait=False)
-
-    def gripper_old():
-        # self.robot.set_gripper_position(850, wait=False)
-
-        # self.robot.set_gripper_enable(True)
-        # self.robot.set_gripper_mode(0)
-        # self.robot.set_gripper_speed(2000)
-
-        # first read the current position
-        grip = self.gget.call_async(GetFloat32.Request())
-
-        def fn(result):
-            self.grip = result.data
-
-        call = partial(self.response_callback, func=fn)
-        grip.add_done_callback(call)
-
-        if self.grip is None:
             return
+        grip = grip / 850
 
-        # then set the new position
-        # current_grip + grip_action
+        self.gripper_pub.publish(Float32MultiArray(data=[grip]))
+        self.grip = grip if self.grip is None else self.grip
+
         clip = lambda a, b: lambda x: max(min(b, x), a)
-        if self.joint_ctrl:
-            if self.leader is None:
-                return
-            new = self.leader[-1] * 850
-        else:
-            new = self.grip + self.act[-1]
-        new = clip(0.0, 850)(new)
 
-        self.req = GripperMove.Request()
-        self.req.pos = float(new)
-        self.req.wait = False
-        self.req.timeout = 10.0
-        # Call the service asynchronously.
-        future = self.gset.call_async(self.req)
-        # Attach a callback to process the response.
-        future.add_done_callback(self.response_callback)
+        match self.cfg.input:
+            case InputMode.GELLO | InputMode.MODEL:
+                if self.leader is None:
+                    return
+                new = self.leader[-1]
+            case InputMode.SPACEMOUSE | InputMode.HELEO:
+                if self.act is None:
+                    return
+                new = self.grip + self.act[-1]
+            case _:
+                raise NotImplementedError("not implemented for this input mode")
+
+        match self.cfg.input:
+            case InputMode.GELLO | InputMode.SPACEMOUSE:
+                pass  # no binning for teleop
+            case _:
+                new = clip(0.0, 1.0)(new)
+                new = new * (self.gema) + self.grip * (1 - self.gema)
+                self.grip = new
+
+        # print(new)
+        out = new * 850
+
+        match self.cfg.input:
+            case InputMode.MODEL:
+                binsize = 850 // 30
+                discretize = lambda x: int(x / binsize) * binsize
+                out = discretize(out)
+            case _:
+                pass
+
+        self.robot.set_gripper_position(out, wait=False)
 
     def response_callback(self, future, func=None):
         try:
@@ -297,7 +341,6 @@ class Xarm(Base):
         # self.get_logger().info(f"Service response: {response}")
 
     def run(self):
-
         warn = "Only one of act or leader should be set."
         assert self.act is None or self.leader is None, warn
         if self.joint_ctrl:
@@ -305,28 +348,72 @@ class Xarm(Base):
         if not self.joint_ctrl:
             assert self.leader is None, "no joint control in cartesian control mode"
 
-        if self.act:
-            self.move_cartesian()
-        elif self.leader is not None:
-            self.move_joints()
+        match self.cfg.input:
+            case InputMode.GELLO | InputMode.MODEL:
+                self.move_joints()
+            case InputMode.SPACEMOUSE | InputMode.HELEO:
+                self.move_cartesian()
 
     def move_cartesian(self):
         msg = TwistStamped()
 
-        msg.twist.linear.x = self.act[0]
-        msg.twist.linear.y = self.act[1]
-        msg.twist.linear.z = self.act[2]
-        msg.twist.angular.x = self.act[3]
-        msg.twist.angular.y = self.act[4]
-        msg.twist.angular.z = self.act[5]
+        if self.act is None or self.pose is None:
+            return
 
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "link_base"
-        self.twist_pub.publish(msg)
+        if self.cfg.input == InputMode.HELEO:
+            if not self.active:
+                return
+
+            if self.acc.i == 0:
+                self.acc.position = self.act
+                self.acc.velocity = np.zeros_like(self.act)
+            self.acc.position = self.act
+
+            # step = self.act if self.active else None
+            # out = self.acc.step(step)
+
+            # if self.p < self.hz:  # velocity ramp during start
+            # out["velocity"] = out["velocity"] * (self.p / self.hz)
+
+            # act = self.act[:-1] - self.pose
+            # act = out['position'][:-1] - self.pose
+
+            act = np.array(self.act[:-1]) - np.array(self.pose)
+            # act = np.array(self.act).copy()
+            # self.act = np.array([0]*6 + [self.grip])
+            scale = 0.05
+            act = np.clip(act, -scale, scale).tolist()
+            self.pose = np.array(self.pose) + np.array(act)
+
+            # if np.random.rand() < 0.9:
+            # act = np.zeros_like(act).tolist()
+            # act = np.zeros_like(act).tolist()
+            msg.twist.linear.x = act[0]
+            msg.twist.linear.y = act[1]
+            msg.twist.linear.z = act[2]
+            msg.twist.angular.x = 0.0
+            msg.twist.angular.y = 0.0
+            msg.twist.angular.z = 0.0
+
+            # msg.velocities = out["velocity"].tolist()
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.header.frame_id = "link_base"
+            self.twist_pub.publish(msg)
+
+        if self.cfg.input == InputMode.SPACEMOUSE:
+            msg.twist.linear.x = self.act[0]
+            msg.twist.linear.y = self.act[1]
+            msg.twist.linear.z = self.act[2]
+            msg.twist.angular.x = self.act[3]
+            msg.twist.angular.y = self.act[4]
+            msg.twist.angular.z = self.act[5]
+
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.header.frame_id = "link_base"
+            self.twist_pub.publish(msg)
 
     def move_joints(self):
-
-        if self.joints is None:
+        if self.joints is None or self.leader is None:
             return
 
         # if self.acc.i % self.hz == 0:
@@ -344,7 +431,7 @@ class Xarm(Base):
             self.acc.velocity = np.zeros_like(self.joints)
         self.acc.position = self.joints
 
-        step = self.leader[:-1] if self.active else self.home["angle"]
+        step = self.leader[:-1] if self.active else self.home.angle
         out = self.acc.step(step)
 
         if self.p < self.hz:  # velocity ramp during start
@@ -374,9 +461,7 @@ class Xarm(Base):
         state = {
             "cartesian": {
                 "cartesian": pos[:3],  # / 1000,  # m to mm
-                "aa": pos[
-                    3:
-                ],  # double check is this axangle or euler... really matrix is best
+                "aa": pos[3:],  # double check is this axangle or euler... really matrix is best
             },
             "joint": {
                 "position": joints,
@@ -419,20 +504,27 @@ class Xarm(Base):
 
     def set_gello(self, msg: Float32MultiArray):
         leader = np.array(msg.data)
-        if self.joints is None:
+        if self.joints is None or self.grip is None:
             return
         if self.leader is None:
             g = self.grip if self.grip is not None else 1
-            self.leader = np.array(self.joints.tolist() + [g])  # smooth start
+            self.leader = np.array([*self.joints.tolist(), g])  # smooth start
         else:
             # self.leader = leader
             # diff = np.log(np.linalg.norm(leader - self.leader))
             # response = 50/diff # faster moves update quicker
-            r = 0.1
-            r = 4 / self.hz
 
-            self.leader = leader * (r) + self.leader * (1 - r)
-            self.leader[-1] = leader[-1]  # no smoothing on gripper
+            self.leader[:-1] = leader[:-1] * (self.ema) + self.leader[:-1] * (1 - self.ema)
+            self.leader[-1] = leader[-1]  # no smoothing on gripper because gema
+
+    def set_pose(self, msg: RobotMsg):
+        """
+        RobotMsg message has:
+            header: std_msgs/Header header
+            pose: List[float64]
+            ...others...
+        """
+        self.pose = np.array(msg.pose).astype(np.float32)
 
     def set_joints(self, msg: JointState):
         """
@@ -469,16 +561,20 @@ class Xarm(Base):
     def _clear_error_states(self):
         if self.robot is None:
             return
-        # self.robot.clean_error()
-        # self.robot.clean_warn()
-        # self.robot.motion_enable(True)
         time.sleep(0.1)
-        # self.robot.set_mode(1)
+        print(self.robot.set_state(state=0))
+        print(self.robot.set_mode(1))
+        time.sleep(0.1)
+        self.robot.clean_error()
+        self.robot.clean_warn()
+        self.robot.motion_enable(True)
+        time.sleep(0.1)
+        self.robot.set_mode(1)
         time.sleep(0.1)
         # self.robot.set_collision_sensitivity(0)
-        # time.sleep(0.1)
-        # self.robot.set_state(state=0)
-        # time.sleep(0.1)
+        time.sleep(0.1)
+        self.robot.set_state(state=0)
+        time.sleep(0.1)
         self.robot.set_gripper_enable(True)
         time.sleep(0.1)
         self.robot.set_gripper_mode(0)
