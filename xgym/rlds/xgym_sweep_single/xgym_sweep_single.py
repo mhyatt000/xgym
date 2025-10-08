@@ -6,7 +6,7 @@ from xgym.rlds.base import XgymSingle
 class XgymSweepSingle(XgymSingle):
     """DatasetBuilder for LUC XGym 'duck in basket' Single Arm"""
 
-    VERSION = tfds.core.Version("4.0.3")
+    VERSION = tfds.core.Version("4.0.6")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

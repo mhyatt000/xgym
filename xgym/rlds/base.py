@@ -279,7 +279,9 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         "3.0.0": "relocated setup",
         "4.0.0": "50hz data",
         "4.0.3": "50hz data",
-        # "4.0.4": "64x64 images",
+        "4.0.4": "64x64 images",
+        "4.0.5": "new camera loc",
+        "4.0.6": "new arena",
     }
 
     imshapes = {
@@ -339,9 +341,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
                                         "side": feat_im(
                                             doc="Low side view logitech camera RGB observation."
                                         ),
-                                        "overhead": feat_im(
-                                            doc="Overhead logitech camera RGB observation."
-                                        ),
+                                        # "overhead": feat_im( doc="Overhead logitech camera RGB observation."),
                                         "wrist": feat_im(
                                             doc="Wrist realsense camera RGB observation."
                                         ),
@@ -426,10 +426,9 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
 
         n = len(ep["time"])
 
-
         ### cleanup and remap keys
         ep.pop("time")
-        ep.pop("gello_joints")
+        leader = ep.pop("gello_joints")
 
         ep["robot"] = {}
         ep["robot"]["joints"] = ep.pop("xarm_joints")
@@ -437,34 +436,26 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         ep["robot"]["gripper"] = ep.pop("xarm_gripper")
         # ep['robot'] = {'joints': joints, 'position': np.concatenate((pose, grip), axis=1)}
 
-        try:  # we dont want the ones with only rs
-            _ = ep.get("/xgym/camera/worm")
-        except KeyError:
-            print("no worm camera")
-            return None
-
-        zeros = lambda: np.zeros((n, *self.imshape), dtype=np.uint8)
-
-
-
         if "/xgym/camera/wrist" not in ep:
             ep["/xgym/camera/wrist"] = ep.pop("/xgym/camera/rs")
-        if "/xgym/camera/worm" not in ep:
+        if "/xgym/camera/worm" not in ep or '/xgym/camera/low' in ep:
             ep["/xgym/camera/worm"] = ep.pop("/xgym/camera/low")
 
-        ep["/xgym/camera/overhead"] = ep.pop("/xgym/camera/over", zeros())
         ep["image"] = {
-            k: tf.image.resize(
-        ep.pop(f"/xgym/camera/{k}", zeros()),
-        self.imshape[:2], method="bilinear").numpy().astype(np.uint8)
-            for k in ["worm", "side", "overhead", "wrist"]
+            k: tf.image.resize( 
+                ep.pop(f"/xgym/camera/{k}"),
+                self.imshape[:2], method="bilinear").numpy().astype(np.uint8)
+            for k in ["worm", "side", "wrist"]
         }
 
         ### scale and binarize
         ep["robot"]["gripper"] /= 850
         ep["robot"]["position"][:, :3] /= 1e3
-        _binarize = partial(binarize, open=0.95, close=0.4)  # doesnt fully close
-        ep["robot"]["gripper"] = np.array(_binarize(jnp.array(ep["robot"]["gripper"])))
+        if False: # we dont use anymore
+            _binarize = partial(binarize, open=0.95, close=0.4)  # doesnt fully close
+            ep["robot"]["gripper"] = np.array(_binarize(jnp.array(ep["robot"]["gripper"])))
+        leader_grip = leader[:, -1:]
+        ep['robot']['gripper'] = leader_grip 
 
         ### filter noop cartesian
         pos = np.concatenate((ep["robot"]["position"], ep["robot"]["gripper"]), axis=1)
@@ -480,9 +471,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         ep = jax.tree.map(select := lambda x: x[mask], ep)
 
         ### calculate action
-        action = jax.tree.map(
-            lambda x: x[1:] - x[:-1], ep["robot"]
-        )  # pose and joint action
+        action = jax.tree.map( lambda x: x[1:] - x[:-1], ep["robot"])  # pose and joint action
         action["gripper"] = ep["robot"]["gripper"][1:]  # gripper is absolute
         ep = jax.tree.map(lambda x: x[:-1], ep)
         # ep["action"] = action # action is not an observation
