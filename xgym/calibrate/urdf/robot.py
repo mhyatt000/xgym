@@ -1,6 +1,5 @@
-# mpl webagg
-# import matplotlib as mpl
-# mpl.use("webagg")
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +11,12 @@ from rich.pretty import pprint
 import torch
 from tqdm import tqdm
 
+from xgym import BASE
+
+# mpl webagg
+# import matplotlib as mpl
+# mpl.use("webagg")
+
 # name of this file
 FNAME = Path(__file__)
 DNAME = Path(__file__).parent
@@ -20,17 +25,22 @@ urdf = DNAME / "xarm7_standalone.urdf"
 
 
 class RobotTree:
-    def __init__(self, path: str = urdf):
+    def __init__(self, path: Path | str = urdf):
         self.path = path
-        self.chain = pk.build_chain_from_urdf(open(path, mode="rb").read())
+
+        with open(path, "rb") as f:
+            data = f.read()
+        self.chain = pk.build_chain_from_urdf(data)
 
         try:
-            self.chain.print_tree()
+            # self.chain.print_tree()
+            print(self.chain)
         except Exception as e:
             print(f"Error printing tree: {e}")
 
         # extract a specific serial chain such as for inverse kinematics
-        self.serial = pk.SerialChain(self.chain, "link_tcp", "link_base")
+        # link_eef xarm_gripper_base_link link_tcp
+        self.serial = pk.SerialChain(self.chain, "xarm_gripper_base_link", "link_base")
         # self.serial.print_tree()
 
         self.names = self.chain.get_joint_parameter_names()
@@ -46,13 +56,19 @@ class RobotTree:
         self.kin = self.serial.forward_kinematics(self.pose, end_only=end_only)
         return self.kin
 
+    def j(self, q: torch.Tensor):
+        """Convert joint angles to tensor"""
+        if not torch.is_tensor(q):
+            q = torch.Tensor(q)
+        if q.dim() == 1:
+            q = q.unsqueeze(0)
+        J = self.serial.jacobian(q)
+        return J
+
 
 @dataclass
 class RobotPose:
     pass
-
-
-from xgym import BASE
 
 
 def plot_frame(mat, ax, length=0.025):
@@ -76,7 +92,7 @@ def main():
 
     viz = False
     if viz:
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10), subplot_kw={"projection": "3d"})
+        _fig, ax = plt.subplots(1, 1, figsize=(10, 10), subplot_kw={"projection": "3d"})
 
     # plot x,y,z axes at origin
     # plot_frame(np.eye(4), ax, length=0.1)
@@ -116,10 +132,9 @@ def main():
         print(KIN.keys())
         _X, _Y, _Z = [], [], []
         for k, mat in KIN.items():
-            if k == "link_base":
+            if viz and k == "link_base":
                 # plot_frame(mat[0].numpy(), ax, length=0.1)
-                if viz:
-                    plot_frame(kinv[0], ax, length=0.1)
+                plot_frame(kinv[0], ax, length=0.1)
 
             _x, _y, _z = mat[0][:3, 3].flatten().numpy()
             _X.append(_x)
@@ -144,7 +159,7 @@ def sandbox():
 
     th = np.array([0.0, -np.pi / 4.0, 0.0, np.pi / 2.0, 0.0, np.pi / 4.0, 0.0])
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10), subplot_kw={"projection": "3d"})
+    _fig, ax = plt.subplots(1, 1, figsize=(10, 10), subplot_kw={"projection": "3d"})
 
     allpositions = {}
     positions = []
@@ -162,11 +177,7 @@ def sandbox():
             rot = pk.matrix_to_quaternion(m[:, :3, :3])
             # print(f"joint {j} angle {i:.2f} pos {pos} rot {rot}")
 
-            ap = {
-                k: ret[k].get_matrix()[:, :3, 3].flatten().numpy()
-                for k in ret.keys()
-                if k.startswith("link")
-            }
+            ap = {k: ret[k].get_matrix()[:, :3, 3].flatten().numpy() for k in ret if k.startswith("link")}
             for k, v in ap.items():
                 if k not in allpositions:
                     allpositions[k] = []
