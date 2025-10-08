@@ -1,10 +1,12 @@
 """Visualize the robot pose in the camera frame."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 import cv2
-from get_calibration import SPEED_JOINTS, Xarm
 from get_calibration import Config as BaseConfig
+from get_calibration import SPEED_JOINTS, Xarm
 import jax
 import numpy as np
 import tyro

@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
+from itertools import chain
 import threading
 import time
-from typing import List, Optional, Union
 
 import cv2
 import numpy as np
@@ -17,7 +19,7 @@ class MyCamera:
     def __repr__(self) -> str:
         return f"MyCamera(device_id={'TODO'})"
 
-    def __init__(self, cam: Union[int, cv2.VideoCapture]):
+    def __init__(self, cam: int | cv2.VideoCapture):
         self.cam = cv2.VideoCapture(cam) if isinstance(cam, int) else cam
         self.thread = None
 
@@ -55,7 +57,7 @@ class MyCamera:
             del self.thread
 
     def read(self):
-        ret, img = self.cam.retrieve()
+        _ret, img = self.cam.retrieve()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img
 
@@ -104,7 +106,7 @@ class Xarm:
         self.robot.set_gripper_speed(2000)
         self.robot.set_gripper_position(800, wait=False)
 
-    def set_joints(self, joints: List[float]):
+    def set_joints(self, joints: list[float]):
         assert len(joints) == 7, "Joints must be a list of 7 floats"
         ret = self.robot.set_servo_angle(
             None,
@@ -133,7 +135,7 @@ class Xarm:
     @property
     def dh(self):
         """Get the Denavit-Hartenberg parameters."""
-        code, dh = self.robot.get_dh_params()
+        _code, dh = self.robot.get_dh_params()
         return np.array(dh, dtype=np.float32).reshape(7, 4)
 
 
@@ -141,7 +143,7 @@ class Xarm:
 class Speed:
     v: float = 0.5
     a: float = 0.5
-    mvtime: Optional[float] = None
+    mvtime: float | None = None
 
     def create(self):
         return {"speed": self.v, "mvacc": self.a, "mvtime": self.mvtime}
@@ -166,7 +168,7 @@ class State:
 
 @dataclass
 class JoinState(State):
-    state: List[float]
+    state: list[float]
 
     def __post_init__(self):
         assert len(self.state) == 7, "State must be 7 floats"
@@ -177,7 +179,7 @@ class Config:
     ip: str = "192.168.1.231"
 
 
-def deg2rad(deg: Union[float, List[float]]) -> Union[float, List[float]]:
+def deg2rad(deg: float | list[float]) -> float | list[float]:
     """Convert degrees to radians."""
     if isinstance(deg, list):
         return [d * np.pi / 180 for d in deg]
@@ -231,10 +233,8 @@ def main(cfg: Config):
     ]
 
     # Interpolate waypoints
-    waypoints = [
-        interpolate_waypoints(a, b) for a, b in zip(waypoints[:-1], waypoints[1:])
-    ]
-    waypoints = sum(waypoints, [])
+    waypoints = [interpolate_waypoints(a, b) for a, b in zip(waypoints[:-1], waypoints[1:])]  # noqa
+    waypoints = list(chain.from_iterable(waypoints))
 
     frames, joints, poses = [], [], []
 
@@ -253,9 +253,7 @@ def main(cfg: Config):
 
         pprint(xarm.pose)
 
-        cv2.imshow(
-            "frame", cv2.resize(frame.copy(), (frame.shape[1] * 2, frame.shape[0] * 2))
-        )
+        cv2.imshow("frame", cv2.resize(frame.copy(), (frame.shape[1] * 2, frame.shape[0] * 2)))
         cv2.waitKey(1)
 
     np.savez(

@@ -7,9 +7,9 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rich.pretty import pprint
 import tyro
-from xgym.nodes.model import ModelClientConfig, NOMODEL
 
 from xgym.nodes import Camera, FootPedal, Gello, Governor, Heleo, Model, SpaceMouse, Writer, Xarm
+from xgym.nodes.model import ModelClientConfig, NOMODEL
 from xgym.nodes.robot import ControlMode, InputMode, RobotConfig
 
 
