@@ -1,12 +1,8 @@
-import os.path as osp
-from pprint import pprint
+from __future__ import annotations
 
 import cv2
-import imageio
 import numpy as np
-from PIL import Image, ImageEnhance
 from scipy.optimize import least_squares
-from tqdm import tqdm
 
 
 def add_col(x):
@@ -21,7 +17,7 @@ def remove_col(x):
 
 
 def apply_uv(image, mat, **rules):
-    H, W = image.shape[:2]
+    _H, _W = image.shape[:2]
     img = cv2.warpPerspective(image, mat[:-1, :-1], **rules)
     return img
 
@@ -87,7 +83,7 @@ def matrix_err(T, P, uv, xyz, a):
 def solve_uv2xyz(xyz, P, uv=None, U=None):
     """solves for a matrix T such that U @ P ≈ P @ T"""
 
-    assert not uv is None or not U is None, "Either uv or U must be provided"
+    assert uv is not None or U is not None, "Either uv or U must be provided"
     if uv is None:
         uv = np.einsum("ij,kj->ki", U @ P, add_col(xyz.reshape(-1, 3)))
         uv = remove_col(uv)

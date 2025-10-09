@@ -1,12 +1,7 @@
-from pathlib import Path
-from pprint import pprint
-from typing import Any, Iterator, Tuple
+from __future__ import annotations
 
-import jax
-import numpy as np
 import tensorflow_datasets as tfds
-import xgym
-from tqdm import tqdm
+
 from xgym.rlds.base import TFDSBaseMano
 
 

@@ -1,21 +1,22 @@
+from __future__ import annotations
+
 import abc
-from rich.pretty import pprint
-import warnings
 from abc import ABC
 from functools import partial
 from pathlib import Path
-from pprint import pprint
-from typing import Any, Dict, Iterator, Tuple
+from typing import Any, ClassVar, Iterator
+import warnings
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-import tensorflow_datasets as tfds
-import xgym
 from rich.pretty import pprint
+import tensorflow as tf
+import tensorflow_datasets as tfds
+
+import xgym
 from xgym.rlds.util.trajectory import binarize_gripper_actions as binarize
 from xgym.rlds.util.trajectory import scan_noop
-import tensorflow as tf
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -24,7 +25,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
     """DatasetBuilder Base Class for LUC XGym Mano"""
 
     VERSION = tfds.core.Version("3.0.0")
-    RELEASE_NOTES = {
+    RELEASE_NOTES: ClassVar[dict[str, str]] = {
         "1.0.0": "Initial release.",
         "3.0.0": "New location.",
     }
@@ -55,9 +56,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
                                         doc="RGB observation that follows the hand.",
                                     ),
                                     # "focal_length": tfds.features.Tensor( shape=(), dtype=np.float32),
-                                    "scaled_focal_length": tfds.features.Tensor(
-                                        shape=(), dtype=np.float32
-                                    ),
+                                    "scaled_focal_length": tfds.features.Tensor(shape=(), dtype=np.float32),
                                     "keypoints_2d": tfds.features.Tensor(
                                         shape=(21, 2),
                                         dtype=np.float32,
@@ -103,19 +102,13 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
                                 dtype=np.float32,
                                 doc="Reward if provided, 1 on final step for demos.",
                             ),
-                            "is_first": tfds.features.Scalar(
-                                dtype=np.bool_, doc="True on first step of the episode."
-                            ),
-                            "is_last": tfds.features.Scalar(
-                                dtype=np.bool_, doc="True on last step of the episode."
-                            ),
+                            "is_first": tfds.features.Scalar(dtype=np.bool_, doc="True on first step of the episode."),
+                            "is_last": tfds.features.Scalar(dtype=np.bool_, doc="True on last step of the episode."),
                             "is_terminal": tfds.features.Scalar(
                                 dtype=np.bool_,
                                 doc="True on last step of the episode if it is a terminal step, True for demos.",
                             ),
-                            "language_instruction": tfds.features.Text(
-                                doc="Language Instruction."
-                            ),
+                            "language_instruction": tfds.features.Text(doc="Language Instruction."),
                             "language_embedding": tfds.features.Tensor(
                                 shape=(512,),
                                 dtype=np.float32,
@@ -169,10 +162,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
         # Normal case: Check both criteria (1) and (2)
         gripper_action = action[-1]
         prev_gripper_action = prev_action[-1]
-        return (
-            np.linalg.norm(action[:-1]) < threshold
-            and gripper_action == prev_gripper_action
-        )
+        return np.linalg.norm(action[:-1]) < threshold and gripper_action == prev_gripper_action
 
     def dict_unflatten(self, flat, sep="."):
         """Unflatten a flat dictionary to a nested dictionary."""
@@ -188,7 +178,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
             d[keys[-1]] = value
         return nest
 
-    def to_rgb(self, ep: Dict):
+    def to_rgb(self, ep: dict):
         """Converts Union[RGB,BGR] to RGB images."""
 
         video = ep["img_wrist"]
@@ -204,7 +194,7 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
 
         return ep
 
-    def _generate_examples(self, ds) -> Iterator[Tuple[str, Any]]:
+    def _generate_examples(self, ds) -> Iterator[tuple[str, Any]]:
         """Generator of examples for each split."""
 
         # task = "embodiment:Human, task:pick up the red block"  # hardcoded for now
@@ -213,7 +203,6 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
         lang = np.load(taskfile)
 
         def _parse_example(idx, ep):
-
             ep = np.load(ep)
             ep = {k: ep[k] for k in ep.files}
             # ep = self.dict_unflatten({k: ep[k] for k in ep.files})
@@ -221,15 +210,12 @@ class TFDSBaseMano(tfds.core.GeneratorBasedBuilder, ABC):
             # pprint(spec(ep))
             # quit()
 
-            ep = {
-                k: v.astype(np.float32) if "img" not in k else v for k, v in ep.items()
-            }
+            ep = {k: v.astype(np.float32) if "img" not in k else v for k, v in ep.items()}
             ep = self.to_rgb(ep)
 
             next = None
             episode = []  # last step is used for noop
             for i, step in enumerate(ep["img"][:-1]):
-
                 # prev = jax.tree.map(lambda x: x[i - 1], ep) if i > 0 else None
                 step = jax.tree.map(lambda x: x[i], ep) if next is None else next
                 next = jax.tree.map(lambda x: x[i + 1], ep)
@@ -273,7 +259,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder Base for LUC XGym"""
 
     # VERSION = tfds.core.Version("3.0.0")
-    RELEASE_NOTES = {
+    RELEASE_NOTES: ClassVar[dict[str, str]] = {
         "1.0.0": "Initial release.",
         "2.0.0": "more data and overhead cam",
         "3.0.0": "relocated setup",
@@ -284,7 +270,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         "4.0.6": "new arena",
     }
 
-    imshapes = {
+    imshapes: ClassVar[dict[str, str]] = {
         224: (224, 224, 3),
         64: (64, 64, 3),
     }
@@ -335,16 +321,10 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
                             {
                                 "image": tfds.features.FeaturesDict(
                                     {
-                                        "worm": feat_im(
-                                            doc="Low front logitech camera RGB observation."
-                                        ),
-                                        "side": feat_im(
-                                            doc="Low side view logitech camera RGB observation."
-                                        ),
+                                        "worm": feat_im(doc="Low front logitech camera RGB observation."),
+                                        "side": feat_im(doc="Low side view logitech camera RGB observation."),
                                         # "overhead": feat_im( doc="Overhead logitech camera RGB observation."),
-                                        "wrist": feat_im(
-                                            doc="Wrist realsense camera RGB observation."
-                                        ),
+                                        "wrist": feat_im(doc="Wrist realsense camera RGB observation."),
                                     }
                                 ),
                                 "proprio": feat_prop(),
@@ -360,19 +340,13 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
                             dtype=np.float32,
                             doc="Reward if provided, 1 on final step for demos.",
                         ),
-                        "is_first": tfds.features.Scalar(
-                            dtype=np.bool_, doc="True on first step of the episode."
-                        ),
-                        "is_last": tfds.features.Scalar(
-                            dtype=np.bool_, doc="True on last step of the episode."
-                        ),
+                        "is_first": tfds.features.Scalar(dtype=np.bool_, doc="True on first step of the episode."),
+                        "is_last": tfds.features.Scalar(dtype=np.bool_, doc="True on last step of the episode."),
                         "is_terminal": tfds.features.Scalar(
                             dtype=np.bool_,
                             doc="True on last step of the episode if it is a terminal step, True for demos.",
                         ),
-                        "language_instruction": tfds.features.Text(
-                            doc="Language Instruction."
-                        ),
+                        "language_instruction": tfds.features.Text(doc="Language Instruction."),
                         "language_embedding": tfds.features.Tensor(
                             shape=(512,),
                             dtype=np.float32,
@@ -394,7 +368,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
 
-        self.root = Path.home() / f"{self.name}:{str(self.VERSION)}"
+        self.root = Path.home() / f"{self.name}:{self.VERSION}"
         files = list(self.root.rglob("*.dat"))
         return {"train": self._generate_examples(files)}
 
@@ -413,10 +387,9 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         return nest
 
     def _parse_example(self, path):
-
         try:
             info, ep = xgym.viz.memmap.read(path)
-            cams = [k for k in info["schema"].keys() if "camera" in k]
+            cams = [k for k in info["schema"] if "camera" in k]
             if len(cams) < 2:
                 raise ValueError(f"Not enough cameras {cams}")
         except Exception as e:
@@ -438,24 +411,24 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
 
         if "/xgym/camera/wrist" not in ep:
             ep["/xgym/camera/wrist"] = ep.pop("/xgym/camera/rs")
-        if "/xgym/camera/worm" not in ep or '/xgym/camera/low' in ep:
+        if "/xgym/camera/worm" not in ep or "/xgym/camera/low" in ep:
             ep["/xgym/camera/worm"] = ep.pop("/xgym/camera/low")
 
         ep["image"] = {
-            k: tf.image.resize( 
-                ep.pop(f"/xgym/camera/{k}"),
-                self.imshape[:2], method="bilinear").numpy().astype(np.uint8)
+            k: tf.image.resize(ep.pop(f"/xgym/camera/{k}"), self.imshape[:2], method="bilinear")
+            .numpy()
+            .astype(np.uint8)
             for k in ["worm", "side", "wrist"]
         }
 
         ### scale and binarize
         ep["robot"]["gripper"] /= 850
         ep["robot"]["position"][:, :3] /= 1e3
-        if False: # we dont use anymore
+        if False:  # we dont use anymore
             _binarize = partial(binarize, open=0.95, close=0.4)  # doesnt fully close
             ep["robot"]["gripper"] = np.array(_binarize(jnp.array(ep["robot"]["gripper"])))
         leader_grip = leader[:, -1:]
-        ep['robot']['gripper'] = leader_grip 
+        ep["robot"]["gripper"] = leader_grip
 
         ### filter noop cartesian
         pos = np.concatenate((ep["robot"]["position"], ep["robot"]["gripper"]), axis=1)
@@ -471,7 +444,7 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         ep = jax.tree.map(select := lambda x: x[mask], ep)
 
         ### calculate action
-        action = jax.tree.map( lambda x: x[1:] - x[:-1], ep["robot"])  # pose and joint action
+        action = jax.tree.map(lambda x: x[1:] - x[:-1], ep["robot"])  # pose and joint action
         action["gripper"] = ep["robot"]["gripper"][1:]  # gripper is absolute
         ep = jax.tree.map(lambda x: x[:-1], ep)
         # ep["action"] = action # action is not an observation
@@ -503,11 +476,11 @@ class XgymSingle(tfds.core.GeneratorBasedBuilder):
         id = f"{path.parent.name}_{path.stem}"
         return id, sample
 
-    def _generate_examples(self, ds) -> Iterator[Tuple[str, Any]]:
+    def _generate_examples(self, ds) -> Iterator[tuple[str, Any]]:
         """Generator of examples for each split."""
 
         pprint(self.root)
-        self.taskfile = next(self.root.glob("*.npy")) # from: cwd
+        self.taskfile = next(self.root.glob("*.npy"))  # from: cwd
         self.task = self.taskfile.stem.replace("_", " ")
         self.lang = np.load(self.taskfile)
 

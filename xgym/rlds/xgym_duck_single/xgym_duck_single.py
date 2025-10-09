@@ -1,4 +1,5 @@
-import tensorflow as tf
+from __future__ import annotations
+
 import tensorflow_datasets as tfds
 
 from xgym.rlds.base import XgymSingle

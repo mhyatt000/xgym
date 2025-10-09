@@ -1,20 +1,17 @@
-import json
-from typing import Optional
-
 """
 Render OpenPose keypoints.
 Code was ported to Python from the official C++ implementation https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/utilities/keypoint.cpp
 """
+
+from __future__ import annotations
+
 import math
-from typing import List, Tuple
 
 import cv2
 import numpy as np
 
 
-def get_keypoints_rectangle(
-    keypoints: np.array, threshold: float
-) -> Tuple[float, float, float]:
+def get_keypoints_rectangle(keypoints: np.array, threshold: float) -> tuple[float, float, float]:
     """
     Compute rectangle enclosing keypoints above the threshold.
     Args:
@@ -41,11 +38,11 @@ def get_keypoints_rectangle(
 def render_keypoints(
     img: np.array,
     keypoints: np.array,
-    pairs: List,
-    colors: List,
+    pairs: list,
+    colors: list,
     thickness_circle_ratio: float,
     thickness_line_ratio_wrt_circle: float,
-    pose_scales: List,
+    pose_scales: list,
     threshold: float = 0.1,
     alpha: float = 1.0,
 ) -> np.array:
@@ -72,32 +69,19 @@ def render_keypoints(
     numberColors = len(colors)
     thresholdRectangle = 0.1
 
-    person_width, person_height, person_area = get_keypoints_rectangle(
-        keypoints, thresholdRectangle
-    )
+    person_width, person_height, person_area = get_keypoints_rectangle(keypoints, thresholdRectangle)
     if person_area > 0:
         ratioAreas = min(1, max(person_width / width, person_height / height))
-        thicknessRatio = np.maximum(
-            np.round(math.sqrt(area) * thickness_circle_ratio * ratioAreas), 2
-        )
-        thicknessCircle = np.maximum(
-            1, thicknessRatio if ratioAreas > 0.05 else -np.ones_like(thicknessRatio)
-        )
-        thicknessLine = np.maximum(
-            1, np.round(thicknessRatio * thickness_line_ratio_wrt_circle)
-        )
+        thicknessRatio = np.maximum(np.round(math.sqrt(area) * thickness_circle_ratio * ratioAreas), 2)
+        thicknessCircle = np.maximum(1, thicknessRatio if ratioAreas > 0.05 else -np.ones_like(thicknessRatio))
+        thicknessLine = np.maximum(1, np.round(thicknessRatio * thickness_line_ratio_wrt_circle))
         radius = thicknessRatio / 2
 
         img = np.ascontiguousarray(img.copy())
         for i, pair in enumerate(pairs):
             index1, index2 = pair
             if keypoints[index1, -1] > threshold and keypoints[index2, -1] > threshold:
-                thicknessLineScaled = int(
-                    round(
-                        min(thicknessLine[index1], thicknessLine[index2])
-                        * pose_scales[0]
-                    )
-                )
+                thicknessLineScaled = round(min(thicknessLine[index1], thicknessLine[index2]) * pose_scales[0])
                 colorIndex = index2
                 color = colors[colorIndex % numberColors]
                 keypoint1 = keypoints[index1, :-1].astype(np.int32)
@@ -114,10 +98,8 @@ def render_keypoints(
         for part in range(len(keypoints)):
             faceIndex = part
             if keypoints[faceIndex, -1] > threshold:
-                radiusScaled = int(round(radius[faceIndex] * pose_scales[0]))
-                thicknessCircleScaled = int(
-                    round(thicknessCircle[faceIndex] * pose_scales[0])
-                )
+                radiusScaled = round(radius[faceIndex] * pose_scales[0])
+                thicknessCircleScaled = round(thicknessCircle[faceIndex] * pose_scales[0])
                 colorIndex = part
                 color = colors[colorIndex % numberColors]
                 center = keypoints[faceIndex, :-1].astype(np.int32)
@@ -447,7 +429,6 @@ def render_openpose(img: np.array, hand_keypoints: np.array) -> np.array:
 
 def plot_mpl(joints, model=None):
     from matplotlib import pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
     fig = plt.figure()

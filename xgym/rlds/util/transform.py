@@ -1,21 +1,11 @@
-import os.path as osp
-from collections import OrderedDict
-from pprint import pprint
+from __future__ import annotations
 
-import cv2
-import imageio
 import jax
 import jax.numpy as jnp
 import numpy as np
-import tensorflow as tf
-from tqdm import tqdm
-
-from ._util import add_col, remove_col
 
 
-def random_resized_crop(
-    seed, scale=[0.8, 1.2], ratio=[0.8, 1.2], tx=[-0.1, 0.1], ty=[-0.1, 0.1], **kwargs
-):
+def random_resized_crop(seed, scale=[0.8, 1.2], ratio=[0.8, 1.2], tx=[-0.1, 0.1], ty=[-0.1, 0.1], **kwargs):
     """generates random resized crop matrix for image and keypoints"""
 
     seed, *rng = jax.random.split(seed, 5)
@@ -25,9 +15,7 @@ def random_resized_crop(
     ty = jax.random.uniform(rng[2], shape=(), minval=ty[0], maxval=ty[1])
 
     # Generate random ratio within specified range
-    log_ratio = jax.random.uniform(
-        rng[3], shape=(), minval=np.log(ratio[0]), maxval=np.log(ratio[1])
-    )
+    log_ratio = jax.random.uniform(rng[3], shape=(), minval=np.log(ratio[0]), maxval=np.log(ratio[1]))
     aspect = jnp.exp(log_ratio)  # Convert log scale back to linear scale
 
     mat_uv = np.array(
@@ -66,7 +54,7 @@ def random_xflip(seed, prob=0.5, **kwargs):
     k = jax.random.uniform(seed, shape=(), minval=0, maxval=1)
     k = k < prob
     sx = -1 if k else 1
-    H, W = kwargs["img"].shape[:2]
+    _H, W = kwargs["img"].shape[:2]
 
     mat_uv = np.array(
         [

@@ -1,14 +1,13 @@
 #
 # trajectory level transforms
 #
+from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
 
 
-def binarize_gripper_actions(
-    actions: jnp.ndarray, open=0.95, close=0.05
-) -> jnp.ndarray:
+def binarize_gripper_actions(actions: jnp.ndarray, open=0.95, close=0.05) -> jnp.ndarray:
     """
     Converts continuous gripper actions into binary (0 or 1) by scanning
     from the end of the array to the beginning, just like the original
@@ -43,9 +42,7 @@ def binarize_gripper_actions(
 
     # Scan over a range of n steps; i goes from 0..n-1
     # reversed_scan_fn updates the carry and returns it as output each step
-    _, reversed_carries = jax.lax.scan(
-        reversed_scan_fn, init_carry, jnp.arange(n), reverse=True
-    )
+    _, reversed_carries = jax.lax.scan(reversed_scan_fn, init_carry, jnp.arange(n), reverse=True)
 
     # reversed_carries[0] corresponds to idx = n-1,
     # reversed_carries[1] corresponds to idx = n-2, ...
@@ -78,15 +75,10 @@ def is_noop(self, action, prev_action=None, threshold=1e-3):
     # Normal case: Check both criteria (1) and (2)
     gripper_action = action[-1]
     prev_gripper_action = prev_action[-1]
-    return (
-        jnp.linalg.norm(action[:-1]) < threshold
-        and gripper_action == prev_gripper_action
-    )
+    return jnp.linalg.norm(action[:-1]) < threshold and gripper_action == prev_gripper_action
 
 
-def scan_noop(
-    positions: jnp.ndarray, threshold: float = 1e-3, binary=True
-) -> jnp.ndarray:
+def scan_noop(positions: jnp.ndarray, threshold: float = 1e-3, binary=True) -> jnp.ndarray:
     """
     Given a trajectory (positions: [n, d]), returns a boolean array of length n
     indicating whether each step is a no-op.
@@ -105,5 +97,5 @@ def scan_noop(
         act = jnp.where(noop, prev, this)
         return act, noop
 
-    carry, noops = jax.lax.scan(f, positions[0], positions[1:])
+    _carry, noops = jax.lax.scan(f, positions[0], positions[1:])
     return jnp.concatenate([jnp.array([first]), noops])

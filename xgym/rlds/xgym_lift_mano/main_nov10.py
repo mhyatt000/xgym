@@ -1,20 +1,16 @@
-import os.path as osp
+from __future__ import annotations
+
 from collections import OrderedDict
-from pprint import pprint
+import os.path as osp
 
 import cv2
 import imageio
 import jax
-import jax.numpy as jnp
-import numpy as np
-import tensorflow as tf
-import torch
-from tqdm import tqdm
-
 import local
-import util
+import numpy as np
+from tqdm import tqdm
 from transforms import center_crop, random_resized_crop, random_rot, random_xflip
-from util import add_col, apply_persp, apply_uv, apply_xyz, remove_col, solve_uv2xyz
+from util import apply_persp, apply_uv, apply_xyz, solve_uv2xyz
 
 
 def perspective_projection(focal_length, H, W):
@@ -84,7 +80,7 @@ def pipe2(img, out):
     prng = jax.random.PRNGKey(2)
 
     U = np.eye(4)
-    for t, v in transforms.items():
+    for v in transforms.values():
         prng, seed = jax.random.split(prng)
         _U = v["func"](**v["kwargs"], seed=seed, img=img)
 
@@ -113,7 +109,7 @@ def main():
     reader = [next(reader) for _ in range(100)][80:]
 
     for i, img in tqdm(enumerate(reader), total=len(reader)):
-        out = np.load(f"data/pose_{i+80}.npz", allow_pickle=True)
+        out = np.load(f"data/pose_{i + 80}.npz", allow_pickle=True)
         out = {k: out[k] for k in out.files}
 
         print(i)
