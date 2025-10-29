@@ -11,7 +11,7 @@ from rich.pretty import pprint
 import torch
 from tqdm import tqdm
 
-from xgym import BASE
+from xgym.names import BASE
 
 # mpl webagg
 # import matplotlib as mpl
