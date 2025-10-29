@@ -56,14 +56,17 @@ class RobotTree:
         self.kin = self.serial.forward_kinematics(self.pose, end_only=end_only)
         return self.kin
 
-    def j(self, q: torch.Tensor):
-        """Convert joint angles to tensor"""
-        if not torch.is_tensor(q):
-            q = torch.Tensor(q)
-        if q.dim() == 1:
-            q = q.unsqueeze(0)
+    def jac(self, q: torch.Tensor):
+        q = torch.Tensor(q) if not torch.is_tensor(q) else q
+        q = q.unsqueeze(0) if q.dim() == 1 else q
+
         J = self.serial.jacobian(q)
         return J
+
+    @property
+    def frames(self):
+        """i think matrix of dh params?"""
+        return self.serial._serial_frames
 
 
 @dataclass
