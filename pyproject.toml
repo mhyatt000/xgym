@@ -6,7 +6,19 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "."}
-packages = ["xgym"]
+# packages = ["xgym"]
+
+# Discover all packages under xgym/
+[tool.setuptools.packages.find]
+include = ["xgym*"]
+
+# Include non-.py files if you have them
+[tool.setuptools.package-data]
+xgym = [
+"py.typed", "**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt", "**/*.so", "**/*.pyd",
+"**/*.urdf", "**/*.stl",
+]
+
 
 [project]
 name = "xgym"
