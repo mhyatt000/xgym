@@ -1,22 +1,19 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-# https://docs.astral.sh/uv/concepts/projects/config/#build-systems
-# https://docs.astral.sh/uv/concepts/projects/config/#build-isolation
+requires = ["uv_build>=0.9.15"]
+build-backend = "uv_build"
 
-[tool.setuptools]
-package-dir = {"" = "."}
-# packages = ["xgym"]
-
-# Discover all packages under xgym/
-[tool.setuptools.packages.find]
-include = ["xgym*"]
+[tool.uv.build-backend]
+module-root = ""
 
 # Include non-.py files if you have them
-[tool.setuptools.package-data]
-xgym = [
-"py.typed", "**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt", "**/*.so", "**/*.pyd",
-"**/*.urdf", "**/*.stl",
+source-include = [
+    # "**/*.yaml", "**/*.yml",
+    # "**/*.json",
+    # "**/*.txt",
+    # "**/*.so",
+    # "**/*.pyd",
+    "**/*.urdf",
+    "**/*.stl",
 ]
 
 
@@ -70,7 +67,7 @@ dev = [
 [tool.uv.sources]
 gello = { git = "https://github.com/wuphilipp/gello_software.git" }
 xarm-python-sdk = { git = "https://github.com/xArm-Developer/xArm-Python-SDK.git" }
-webpolicy = { git = "http://github.com/mhyatt000/webpolicy" }
+webpolicy = { git = "https://github.com/mhyatt000/webpolicy" }
 
 [tool.ruff]
 target-version = "py311"
